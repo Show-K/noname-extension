@@ -710,7 +710,7 @@ game.import("extension", function(lib, game, ui, get, ai, _status) {
 				translate: {},
 			},
 			intro: "点击按钮即可在线更新，文件下载失败会自动重新下载。</br>点击按钮后若短时间内没反应可以重启游戏。</br><span style='color:red'>请不要在更新时关闭游戏，否则后果自负</br>（更新时关闭游戏后，windows用户会有不能删除的残留文件，可以通过注销用户来自动清除）</span>",
-			author: "诗笺",
+			author: "诗笺、Show-K（修改）",
 			diskURL: "",
 			forumURL: "",
 			version: "1.18.1",

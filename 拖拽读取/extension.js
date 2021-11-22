@@ -672,7 +672,7 @@ game.import("extension", function(lib, game, ui, get, ai, _status) {
 				translate: {},
 			},
 			intro: `windows电脑版专属扩展，把zip文件（离线包，扩展或素材压缩包）拖入到游戏内即可导入`,
-			author: "诗笺",
+			author: "诗笺、Show-K（修改）",
 			diskURL: "",
 			forumURL: "",
 			version: "1.75",
