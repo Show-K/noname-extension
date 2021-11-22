@@ -8,18 +8,18 @@ game.import("extension", function(lib, game, ui, get, ai, _status) {
 		throw '没有nodejs环境，无法导入此扩展';
 	}
 
-	const fs = require("fs");
-	const { versions } = process;
-	const electronVersion = parseFloat(versions.electron);
+	var fs = require("fs");
+	var { versions } = process;
+	var electronVersion = parseFloat(versions.electron);
 	let remote;
 	if (electronVersion >= 14) {
 		remote =  require('@electron/remote');
 	} else {
 		remote = require('electron').remote;
 	}
-	const { dialog, BrowserWindow } = remote;
-	const path = require('path');
-	const body = document.body;
+	var { dialog, BrowserWindow } = remote;
+	var path = require('path');
+	var body = document.body;
 	let loadCSS = false;
 
 	function createIframe(src) {
