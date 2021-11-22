@@ -12,7 +12,7 @@ extension["在线更新"]={
 extension["拖拽读取"]={
     author:"诗笺、Show-K（修改）",
     intro:"windows电脑版专属扩展，把zip文件（离线包，扩展或素材压缩包）拖入到游戏内即可导入",
-    size:"189KB",
+    size:"123KB",
     netdisk:"",
     version:1.75,
     files:[
