@@ -418,7 +418,7 @@ game.import("extension", function(lib, game, ui, get, ai, _status) {
 				},
 			},
 			updateAll: {
-				init: false,
+				init: true,
 				intro: '更新游戏时，下载所有主要文件（不包括素材），如果你自行修改了无名杀本体的theme等文件夹下的素材，建议不要开启此选项',
 				name: '强制更新所有主文件',
 				onclick: (bool) => {
@@ -668,7 +668,7 @@ game.import("extension", function(lib, game, ui, get, ai, _status) {
 				}
 			},
 			assetSkin: {
-				init: false,
+				init: true,
 				intro: '检查更新时，检查皮肤文件',
 				name: '检查皮肤素材',
 				onclick: (bool) => {
