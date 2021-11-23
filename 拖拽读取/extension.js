@@ -675,7 +675,7 @@ game.import("extension", function(lib, game, ui, get, ai, _status) {
 			author: "诗笺、Show-K（修改）",
 			diskURL: "",
 			forumURL: "",
-			version: "1.75",
+			version: "1.75.1",
 		},
 		files: {
 			"character": [],
