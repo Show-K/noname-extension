@@ -6,7 +6,7 @@ game.import("extension", function(lib, game, ui, get, ai, _status) {
 			throw '此设备未联网！';
 		}
 		if (typeof game.writeFile != 'function') {
-			throw '此版本无名杀不支持写入文件！';
+			throw '此版本大乱桌斗不支持写入文件！';
 		}
 		
 		let downloadUrl = url, path = '', name = url;
@@ -418,8 +418,8 @@ game.import("extension", function(lib, game, ui, get, ai, _status) {
 				},
 			},
 			updateAll: {
-				init: true,
-				intro: '更新游戏时，下载所有主要文件（不包括素材），如果你自行修改了无名杀本体的theme等文件夹下的素材，建议不要开启此选项',
+				init: false,
+				intro: '更新游戏时，下载所有主要文件（不包括素材），如果你自行修改了大乱桌斗本体的theme等文件夹下的素材，建议不要开启此选项',
 				name: '强制更新所有主文件',
 				onclick: (bool) => {
 					game.saveExtensionConfig('在线更新', 'updateAll', bool);
@@ -668,7 +668,7 @@ game.import("extension", function(lib, game, ui, get, ai, _status) {
 				}
 			},
 			assetSkin: {
-				init: true,
+				init: false,
 				intro: '检查更新时，检查皮肤文件',
 				name: '检查皮肤素材',
 				onclick: (bool) => {
@@ -714,10 +714,10 @@ game.import("extension", function(lib, game, ui, get, ai, _status) {
 				translate: {},
 			},
 			intro: "点击按钮即可在线更新，文件下载失败会自动重新下载。</br><span style='color:red'>请不要在更新时关闭游戏，否则后果自负</span></br>最新完整包下载地址：<a target='_self' href='https://hub.fastgit.org/Show-K/noname/archive/refs/heads/super_smash_tabletop.zip'><span style='text-decoration: underline;'>点击下载</span></a>",
-			author: "诗笺",
+			author: "诗笺、Show-K（修改）",
 			diskURL: "",
 			forumURL: "",
-			version: "1.2.1",
+			version: "1.2.1SST",
 		},
 		files: {
 			"character": [],
