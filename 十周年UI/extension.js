@@ -3196,7 +3196,7 @@ content:function(config, pack){
 				return base.game.phaseLoop.apply(this, arguments);
 			};
 			
-			lib.config.low_performance = true;
+			//lib.config.low_performance = true;
 
 			game.check = function(event){
 				var i, j, range;
