@@ -1,19 +1,15 @@
-/*玩家基本外观*/
+/*角色基本外观*/
 .player {
 	height: 180px;
 	width: 120px;
 	border-radius: 8px;
-	box-shadow: 0px -1px 3px black, 0px 3px 10px black;
+	box-shadow: 0px -1px 3px black, 0px 3px 8px black;
 	background-image: linear-gradient(rgb(53,38,32), rgb(53,38,32));
 	transition-property: transform, opacity, left, top, right, bottom;
 }
 
 .dui-mobile .player {
-	box-shadow: 0px -1px 2px black, 0px 1px 6px black;
-}
-
-.player.target {
-    box-shadow: none !important;
+	box-shadow: 0px -1px 2px black, 0px 1px 5px black;
 }
 
 .player.dead {
@@ -25,57 +21,77 @@
 
 
 .player::before {
-	left: -15px;
-    top: -15px;
-    width: calc(100% + 30px);
-    height: calc(100% + 30px);
-	border-width: 15px;
-    border-style: solid;
-    border-color: transparent;
-	border-image-source: url('assets/image/glow_blue.png');
-    border-image-slice: 42 46 32 46 fill;
-	box-sizing: border-box;
+	/* left: -15px; */
+    /* top: -15px; */
+    /* width: calc(100% + 30px); */
+    /* height: calc(100% + 30px); */
+	/* border-width: 15px; */
+    /* border-style: solid; */
+    /* border-color: transparent; */
+	/* border-image-source: url('assets/image/glow_blue.png'); */
+    /* border-image-slice: 42 46 32 46 fill; */
+	/* box-sizing: border-box; */
+	left: -55px;
+    top: -42px;
+    width: 230px;
+    height: 262px;
+	opacity: 0;
+	background-image: url('assets/image/sprites_glow_blue.png');
+	background-repeat: no-repeat;
+	animation-name: kf-sprites-glow;
+	animation-duration: 0.9s;
+    animation-delay: 0s;
+    animation-iteration-count: infinite;
+    animation-fill-mode: forwards;
+    animation-timing-function: steps(1);
 	pointer-events: none;
 	box-shadow: none;
-	opacity: 0;
-    /* box-shadow: 0px -1px 3px rgb(100, 100, 170), 0px 0px 6px rgb(100, 100, 170), 0px 3px 9px rgb(100, 100, 170), 0px 3px 12px rgb(100, 100, 170); */
-    /* transition: opacity 0.3s; */
+	transition: opacity 0.1s linear;
 }
 
-.player.selected:not(.target)::before,
-.player.glow_phase:not(.selectable):not(.target):not(*[data-position='0'])::before {
-	border-image-source: url('assets/image/glow_orange.png');
+.player.selected:not(.target):before,
+.player.glow_phase:not(.selectable):not(*[data-position='0'])::before {
+	/* border-image-source: url('assets/image/glow_orange.png'); */
+	background-image: url('assets/image/sprites_glow_orange.png');
 	opacity: 1;
-    /* box-shadow: 0px -1px 3px yellow, 0px -1px 6px yellow, 0px 0px 9px yellow, 0px 3px 12px yellow; */
-    transition: opacity 0.3s linear;
 }
 
 .player.selectable:not(.selected):not(.target)::before {
     opacity: 1;
-	transition: opacity 0.3s linear;
 }
 
 .player::after,
 .player.selected::after,
 .player.selectable::after {
-    opacity: 0;
-    left: -15px;
-    top: -15px;
-    width: calc(100% + 30px);
-    height: calc(100% + 30px);
-	border-width: 15px;
-    border-style: solid;
-    border-color: transparent;
-	border-image-source: url('assets/image/glow_red.png');
-    border-image-slice: 42 46 32 46 fill;
-	box-sizing: border-box;
+    /* left: -15px; */
+    /* top: -15px; */
+    /* width: calc(100% + 30px); */
+    /* height: calc(100% + 30px); */
+	/* border-width: 15px; */
+    /* border-style: solid; */
+    /* border-color: transparent; */
+	/* border-image-source: url('assets/image/glow_red.png'); */
+    /* border-image-slice: 42 46 32 46 fill; */
+	/* box-sizing: border-box; */
+	left: -55px;
+    top: -42px;
+    width: 230px;
+    height: 262px;
+	opacity: 0;
+	background-image: url('assets/image/sprites_glow_red.png');
+	background-repeat: no-repeat;
+	animation-name: kf-sprites-glow;
+	animation-duration: 0.9s;
+    animation-delay: 0s;
+    animation-iteration-count: infinite;
+    animation-fill-mode: forwards;
+    animation-timing-function: steps(1);
 	pointer-events: none;
 	box-shadow: none;
-    /* box-shadow: 0px -1px 3px yellow, 0px 0px 6px red, 0px 3px 9px red, 0px 3px 12px red, 0px 0px 15px red; */
-    transition: opacity 0.3s;
+    transition: opacity 0.1s linear;
 }
 
-.player.target:not(.selectable):not(.selected)::after {
+.player.target:not(.glow_phase):not(.selectable):not(.selected)::after {
     opacity: 1;
 }
 
@@ -128,7 +144,6 @@
 }
 
 /*主玩家位置*/
-
 .player[data-position='0'], 
 #arena>.player[data-position='0'],
 #arena>.player[data-position='0']:not(.minskin),
@@ -167,7 +182,6 @@
 
 .player>.camp-wrap>.camp-back {
 	background: linear-gradient(to bottom, rgb(155,129,108), rgb(73,71,58));
-	clip-path: polygon(0 0, 100% 0, 100% 90%, 50% 100%, 0% 90%);
     -webkit-clip-path: polygon(0 0, 100% 0, 100% 90%, 50% 100%, 0% 90%);
 }
 
@@ -307,7 +321,7 @@
 }
 
 .player>.camp-wrap>.camp-name {
-	font-family: xinwei, xingkai;
+	font-family: fzhtk, fzhtk;
 	font-display: swap;
 	font-size: 26px;
     width: 100%;
@@ -393,7 +407,7 @@
 .player>.nameol {
 	top: 5px;
     font-size: 16px;
-    font-family: 'shousha';
+    font-family: 'fzhtk';
     text-shadow: 0 0 2px black;
     background: linear-gradient(to right, transparent 0%, rgba(0,0,0,0.4) 40%, rgba(0,0,0,0.4) 60%, transparent 100%);
     z-index: 89;
@@ -414,7 +428,8 @@
 	border-image-slice: 32 6 25 113 fill;
 	pointer-events: none;
 	transition-property: transform, opacity, height;
-	transition-duration: 0.5s;
+	transition-duration: 0.1s;
+	transition-timing-function: linear;
 	z-index: 88;
 }
 
@@ -509,6 +524,10 @@
 	border-radius: 8px 0 0 8px;
 }
 
+.player.bossplayer>.primary-avatar:not(.hp):not(.identity):not(.avatar):not(.framebg) {
+	display: block !important;
+}
+
 .player>.deputy-avatar {
 	left: 50%;
 	top: auto;
@@ -538,18 +557,15 @@
 
 #arena[data-outcrop-skin='on']>.player>.primary-avatar {
 	height: 192px;
-	clip-path: url(#solo-clip);
     -webkit-clip-path: url(#solo-clip);
 }
 
 #arena[data-outcrop-skin='on']>.player>.deputy-avatar {
     height: 192px;
-	clip-path: url(#duor-clip);
     -webkit-clip-path: url(#duor-clip);
 }
 
 #arena[data-outcrop-skin='on']>.player.fullskin2>.primary-avatar {
-	clip-path: url(#duol-clip);
 	-webkit-clip-path: url(#duol-clip);
 }
 
@@ -562,6 +578,7 @@
     width: 100%;
     height: 100%;
     border-radius: 8px;
+	background-size: cover;
 	background-repeat: no-repeat;
     pointer-events: none;
     z-index: 60;
@@ -576,9 +593,11 @@
 	height: 100%;
 	border-radius: inherit;
 	pointer-events: none;
+	-webkit-clip-path: inset(0 0 0 0 round 8px);
 }
 
 #arena[data-dynamic-skin-outcrop='on']>.player>.dynamic-wrap>.animation-player {
+	-webkit-clip-path: url(#dskin-clip);
 	height: 200px;
 }
 
@@ -658,7 +677,7 @@
 	width: 18px;
 	height: auto;
 	border-radius: 0;
-	font-family: xinwei,xingkai;
+	font-family: fzhtk,fzhtk;
 	box-shadow:  none;
 	background: none;
 	overflow: visible;
@@ -684,7 +703,7 @@
     line-height: 16px;
     text-align: center;
 	font-size: 20px;
-    font-family: xinwei,xingkai;
+    font-family: fzhtk,fzhtk;
     color: rgb(77, 60, 51);
     border-radius: 5px;
     background-image: radial-gradient(rgb(255, 255, 200) 0, rgb(255, 255, 120) 50%, rgb(255, 255, 10) 80%, yellow 100%);
@@ -799,8 +818,31 @@
     box-shadow: none;
 }
 
+.mark-container.marks>.mark {
+	overflow: visible;
+}
 
+.mark-container.marks>.mark>.mark-text {
+	display: flex;
+	position: absolute;
+	justify-content: center;
+	align-items: center;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	color: black;
+	font-size: 20px;
+}
 
+.mark-container.marks>.mark>.mark-count {
+	display: block;
+	position: absolute;
+	right: -5px;
+	width: 15px;
+	background: white;
+	border-radius: 4px;
+}
 
 /*玩家判断标记显示*/
 .player>.judges,
@@ -897,7 +939,7 @@
     top: 0;
     width: 100%;
     height: 100%;
-    font-family: xinwei, xingkai;
+    font-family: fzhtk, fzhtk;
     font-size: 16px;
     color: white;
     text-shadow: #000 1px 0 0, #000 0 1px 0, #000 -1px 0 0, #000 0 -1px 0, 0 0 8px #000;
@@ -921,7 +963,7 @@
     width: 100%;
     line-height: 16px;
     color: rgb(255,245,223);
-    font-family: 'shousha';
+    font-family: 'fzhtk';
     font-size: 16px;
     text-align: center;
     text-shadow: 0 0 2px black, 0 0 1px black;
@@ -956,7 +998,7 @@
     border: none;
     box-shadow: none;
     font-size: 19px;
-    font-family: xinwei, xingkai;
+    font-family: fzhtk, fzhtk;
     color: white;
     text-align: center;
     text-shadow: none;
@@ -1111,7 +1153,7 @@
     width: 100%;
     height: 32px;
     font-size: 32px;
-    font-family: 'xinwei';
+    font-family: 'fzhtk';
     text-align: center;
     z-index: 89;
 }
@@ -1142,7 +1184,7 @@
     line-height: 38px;
     color: rgb(210, 50, 50);
     font-size: 38px;
-	font-family: xingkai, huangcao, xinwei;
+	font-family: fzhtk, fzhtk, fzhtk;
 	font-display: swap;
     text-shadow: 0 0 5px black, 0 0 10px black, 0 0 15px black;
 	background-size: contain;
@@ -1185,7 +1227,7 @@
 	display: none;
 }
 
-/*人物翻面背景*/
+/*角色翻面背景*/
 .player>.turned-over {
 	position: absolute;
 	left: 0;
@@ -1196,7 +1238,7 @@
 	background-image: url('assets/image/turn_over_mask.png');
     background-size: cover;
 	pointer-events: none;
-	z-index: 61;
+	z-index: 62;
 }
 
 .player.turnedover>.turned-over {
@@ -1205,6 +1247,11 @@
 
 .turnedover>div {
 	opacity: initial;
+}
+
+/*角色边框*/
+.player>.framebg {
+	z-index: 63;
 }
 
 /*身份标记框*/
@@ -1233,7 +1280,7 @@
     border-image-source: url('assets/image/item_bg.png');
     cursor: pointer;
     color: rgb(77, 60, 51);
-    font-family: shousha;
+    font-family: fzhtk;
     font-weight: bold;
     font-size: 20px;
     text-shadow: none;
@@ -1255,8 +1302,18 @@
     border-image-slice: 6 6 14 6 fill;
     border-image-source: url('assets/image/chat_bubble.png');
     box-sizing: border-box;
-	box-sizing: border-box;
     word-break: break-all;
     z-index: 99;
 }
 
+.player>.jie-mark {
+	position: absolute;
+    top: 108px;
+    left: -11px;
+    width: 22px;
+    height: 34px;
+    background-image: url('assets/image/mark_jie.png');
+    background-size: 100% 100%;
+	pointer-events: none;
+    z-index: 87;
+}

@@ -20,7 +20,9 @@ content:function(config, pack){
     }
 	
 	console.time(extensionName);
-	window.decadeUI = {
+	
+	window.duicfg = config;
+	window.dui = window.decadeUI = {
 		init:function(){
 			this.extensionName = extensionName;
 			
@@ -34,22 +36,29 @@ content:function(config, pack){
 			var solo = defs.appendChild(document.createElementNS(SVG_NS, 'clipPath'));
 			var duol = defs.appendChild(document.createElementNS(SVG_NS, 'clipPath'));
 			var duor = defs.appendChild(document.createElementNS(SVG_NS, 'clipPath'));
+			var dskin = defs.appendChild(document.createElementNS(SVG_NS, 'clipPath'));
+			
 			
 			solo.id = 'solo-clip';
 			duol.id = 'duol-clip';
 			duor.id = 'duor-clip';
+			dskin.id = 'dskin-clip';
 			
 			solo.setAttribute('clipPathUnits', 'objectBoundingBox');
 			duol.setAttribute('clipPathUnits', 'objectBoundingBox');
 			duor.setAttribute('clipPathUnits', 'objectBoundingBox');
+			dskin.setAttribute('clipPathUnits', 'objectBoundingBox');
+			
 			
 			var soloPath = solo.appendChild(document.createElementNS(SVG_NS, 'path'));
 			var duoLPath = duol.appendChild(document.createElementNS(SVG_NS, 'path'));
 			var duoRPath = duor.appendChild(document.createElementNS(SVG_NS, 'path'));
-			
-			soloPath.setAttribute('d', 'M0 0 H1 Q1 0.065 0.9 0.065 Q1 0.065 1 0.11 V0.96 Q1 1 0.9 1 H0.1 Q0 1 0 0.96 V0.11 Q0 0.065 0.1 0.065 Q0 0.065 0 0 Z');
-			duoLPath.setAttribute('d', 'M0 0 H1 V1 Q1 1 0.9 1 H0.1 Q0 1 0 0.96 V0.11 Q0 0.065 0.1 0.065 Q0 0.065 0 0 Z');
-			duoRPath.setAttribute('d', 'M0 0 H1 Q1 0.065 0.9 0.065 Q1 0.065 1 0.11 V0.96 Q1 1 0.9 1 H0 Z');
+			var dskinPath = dskin.appendChild(document.createElementNS(SVG_NS, 'path'));
+			// M1 0 H0 Q0 0.06 0.08 0.06 Q0 0.09 0 0.11 V1 H1 Z
+			soloPath.setAttribute('d', 'M0 0 H1 Q1 0.05 0.9 0.06 Q1 0.06 1 0.11 V1 H0 V0.11 Q0 0.06 0.1 0.06 Q0 0.05 0 0 Z');
+			duoLPath.setAttribute('d', 'M1 0 H0 Q0 0.06 0.15 0.06 Q0 0.06 0 0.11 V1 H1 Z');
+			duoRPath.setAttribute('d', 'M0 0 H1 Q1 0.06 0.85 0.06 Q1 0.06 1 0.11 V1 H0 Z');
+			dskinPath.setAttribute('d', 'M0 0 H1 Q1 0.1 0.94 0.1 Q0.985 0.1 1 0.13 V1 H0 V0.14 Q0 0.11 0.06 0.1 Q0 0.1 0 0 Z');
 			
 			document.addEventListener('click', function(e){ dui.set.activeElement(e.target); }, true);
 			this.initOverride();
@@ -72,6 +81,16 @@ content:function(config, pack){
 				}
 				
 				return ok;
+			};
+			
+			function overrides (dest, src) {
+				if (!dest._super) dest._super = {};
+				for (var key in src) {
+					if (dest[key])
+						dest._super[key] = dest[key];
+					
+					dest[key] = src[key];
+				}
 			};
 			
 			var base = {
@@ -143,6 +162,1284 @@ content:function(config, pack){
 					},
 				},
 			};
+			
+			var Player = {};
+			(function(Player){
+				Player.init = function (character, character2, skill) {
+					this.doubleAvatar = (character2 && lib.character[character2]) != undefined;
+				
+					var CUR_DYNAMIC = decadeUI.CUR_DYNAMIC;
+					var MAX_DYNAMIC = decadeUI.MAX_DYNAMIC;
+					if (CUR_DYNAMIC == undefined) {
+						CUR_DYNAMIC = 0;
+						decadeUI.CUR_DYNAMIC = CUR_DYNAMIC;
+					}
+					
+					if (MAX_DYNAMIC == undefined) {
+						MAX_DYNAMIC = decadeUI.isMobile() ? 2 : 10;
+						if (window.OffscreenCanvas)
+							MAX_DYNAMIC += 8;
+						decadeUI.MAX_DYNAMIC = MAX_DYNAMIC;
+					}
+					
+					if (this.dynamic) this.stopDynamic();
+					var showDynamic = (this.dynamic || CUR_DYNAMIC < MAX_DYNAMIC) && duicfg.dynamicSkin;
+					if (showDynamic) {
+						var skins;
+						var dskins = decadeUI.dynamicSkin;
+						var avatars = this.doubleAvatar ? [character, character2] : [character];
+						var increased;
+						
+						for (var i = 0; i < avatars.length; i++) {
+							skins = dskins[avatars[i]];
+							if (skins == undefined)
+								continue;
+							
+							var keys = Object.keys(skins);
+							if (keys.length == 0) {
+								console.error('player.init: ' + avatars[i] + ' 没有设置动皮参数');
+								continue;
+							}
+							
+							var skin = skins[Object.keys(skins)[0]];
+							if (skin.speed == undefined)
+								skin.speed = 1;
+							this.playDynamic({
+								name: skin.name,		//	string 骨骼文件名，一般是assets/dynamic 下的动皮文件，也可以使用.. 来寻找其他文件目录
+								action: skin.action,	// string 播放动作 不填为默认
+								loop: true,				// boolean 是否循环播放
+								loopCount: -1,			// number 循环次数，只有loop为true时生效
+								speed: skin.speed,	 	// number 播放速度
+								filpX: undefined,	 	// boolean 水平镜像
+								filpY: undefined,	 	// boolean 垂直翻转
+								opacity: undefined,	 	// 0~1		不透明度
+								x: skin.x,				// 相对于父节点坐标x，不填为居中
+														// (1) x: 10, 相当于 left: 10px；
+														// (2) x: [10, 0.5], 相当于 left: calc(50% + 10px)；
+								y: skin.y,				// 相对于父节点坐标y，不填为居中
+														// (1) y: 10，相当于 top: 10px；
+														// (2) y: [10, 0.5]，相当于 top: calc(50% + 10px)；
+								scale: skin.scale,		// 缩放
+								angle: skin.angle,		// 角度
+								hideSlots: skin.hideSlots,	// 隐藏不需要的部件，想知道具体部件名称请使用SpineAltasSplit工具查看
+								clipSlots: skin.clipSlots,	// 剪掉超出头的部件，仅针对露头动皮，其他勿用
+							}, i == 1);
+							
+							this.$dynamicWrap.style.backgroundImage = 'url("' + extensionPath + 'assets/dynamic/' + skin.background + '")';
+							if (!increased) {
+								increased = true;
+								decadeUI.CUR_DYNAMIC++;
+							}
+						}
+					}
+					
+					var jie;
+					if (character && duicfg.showJieMark) {
+						jie = lib.characterPack.refresh[character];
+						if (jie == null) {
+							jie = character.substr(0, 3);
+							jie == 're_' || jie == 'ol_' || jie == 'xin' || jie == 'old';
+						}
+							
+						if (jie != null) {
+							jie = lib.translate[character][0];
+							if (jie == '界') {
+								if (this.$jieMark == undefined)
+									this.$jieMark = dui.element.create('jie-mark', this);
+								else
+									this.appendChild(this.$jieMark);
+							}
+						}
+					}
+					
+					var result = this._super.init.apply(this, arguments);
+					if (jie == '界')
+						result.node.name.innerText = result.node.name.innerText.substr(2);
+					
+					return result;
+				};
+				Player.uninit = function () {
+					if (this.$jieMark)
+						this.$jieMark.remove();
+					
+					this.stopDynamic();
+					this.doubleAvatar = false;
+					this.node.campWrap.dataset.camp = null;
+					this.node.campWrap.node.campName.innerHTML = '';
+					this.node.campWrap.node.campName.style.backgroundImage = '';
+					this.node.name2.innerHTML = '';
+					
+					for (var i = 1; i < 6; i++) if (this.isDisabled(i)) this.$enableEquip('equip' + i);
+					
+					if (this.storage._disableJudge) {
+						game.broadcastAll(function(player) {
+							player.storage._disableJudge = false;
+							for (var i = 0; i < player.node.judges.childNodes.length; i++) {
+								if (player.node.judges.childNodes[i].name == 'disable_judge') {
+									player.node.judges.removeChild(player.node.judges.childNodes[i]);
+									break;
+								}
+							}
+						}, this);
+					}
+					this.node.avatar.hide();
+					this.node.count.hide();
+					if (this.node.wuxing) {
+						this.node.wuxing.hide();
+					}
+					if (this.node.name_seat) {
+						this.node.name_seat.remove();
+						this.node.name_seat = undefined;
+					}
+					
+					if (this.storage.nohp) this.node.hp.show();
+					this.classList.remove('unseen');
+					this.classList.remove('unseen2');
+					this.name = undefined;
+					this.name1 = undefined;
+					this.sex = undefined;
+					this.group = undefined;
+					this.hp = undefined;
+					this.maxHp = undefined;
+					this.hujia = undefined;
+					
+					this.clearSkills(true);
+					this.node.identity.style.backgroundColor = '';
+					this.node.intro.innerHTML = '';
+					this.node.name.innerHTML = '';
+					this.node.hp.innerHTML = '';
+					this.node.count.innerHTML = '0';
+					if (this.name2) {
+						this.singleHp = undefined;
+						this.node.avatar2.hide();
+						this.node.name2.innerHTML = '';
+						this.classList.remove('fullskin2');
+						this.name2 = undefined;
+					}
+					
+					for (var mark in this.marks) this.marks[mark].remove();
+					ui.updatem(this);
+
+					this.skipList = [];
+					this.skills = this.skills.contains('cangji_yozuru') ? ['cangji_yozuru'] : [];
+					this.initedSkills = [];
+					this.additionalSkills = {};
+					this.disabledSkills = {};
+					this.hiddenSkills = [];
+					this.awakenedSkills = [];
+					this.forbiddenSkills = {};
+					this.phaseNumber = 0;
+					this.stat = [{
+						card: {},
+						skill: {}
+					}];
+					this.tempSkills = {};
+					this.storage = {};
+					this.marks = {};
+					this.ai = {
+						friend: [],
+						enemy: [],
+						neutral: []
+					};
+
+					return this;
+				};
+				Player.chooseToRespond = function () {
+					var next = game.createEvent('chooseToRespond');
+					next.player = this;
+					for (var i = 0; i < arguments.length; i++) {
+						if (typeof arguments[i] == 'number') {
+							next.selectCard = [arguments[i], arguments[i]];
+						} else if (get.itemtype(arguments[i]) == 'select') {
+							next.selectCard = arguments[i];
+						} else if (typeof arguments[i] == 'boolean') {
+							next.forced = arguments[i];
+						} else if (get.itemtype(arguments[i]) == 'position') {
+							next.position = arguments[i];
+						} else if (typeof arguments[i] == 'function') {
+							if (next.filterCard) next.ai = arguments[i];
+							else next.filterCard = arguments[i];
+						} else if (typeof arguments[i] == 'object' && arguments[i]) {
+							next.filter = arguments[i];
+							next.filterCard = get.filter(arguments[i]);
+							
+						} else if (arguments[i] == 'nosource') {
+							next.nosource = true;
+						} else if (typeof arguments[i] == 'string') {
+							next.prompt = arguments[i];
+						}
+					}
+					if (next.filterCard == undefined) next.filterCard = lib.filter.all;
+					if (next.selectCard == undefined) next.selectCard = [1, 1];
+					if (next.source == undefined && !next.nosource) next.source = _status.event.player;
+					if (next.ai == undefined) next.ai = get.unuseful2;
+					next.position = 'hs';
+					next.setContent('chooseToRespond');
+					next._args = Array.from(arguments);
+					return next;
+				};
+				Player.useCard = function () {
+					var event = this._super.useCard.apply(this, arguments);
+					Object.defineProperties(event, {
+						oncard:{
+							get:function() {
+								return this._oncard;
+							},
+							set:function(value) {
+								this._oncard2 = value;
+							}
+						}
+					});
+					event.finish = function () {
+						this.finished = true;
+						var targets = this.targets;
+						for (var i = 0; i < targets.length; i++) {
+							targets[i].classList.remove('target');
+						}
+					};
+					event._oncard = function () {
+						var player = this.player;
+						var targets = this.targets;
+						for (var i = 0; i < targets.length; i++) {
+							if (targets[i] != player)
+								targets[i].classList.add('target');
+						}
+						
+						
+						if (this._oncard2) this._oncard2();
+					}
+					return event;
+				};
+			})(Player);
+			
+			var EventContent = {};
+			(function(EventContent){
+				EventContent.chooseBool = function () {
+					"step 0"
+					if (event.isMine()) {
+						if (event.frequentSkill && !lib.config.autoskilllist.contains(event.frequentSkill)) {
+							ui.click.ok();
+							return;
+						} else if (event.hsskill && _status.prehidden_skills.contains(event.hsskill)) {
+							ui.click.cancel();
+							return;
+						}
+						ui.create.confirm('oc');
+						if (event.createDialog && !event.dialog) {
+							if (Array.isArray(event.createDialog)) {
+								event.dialog = ui.create.dialog.apply(this, event.createDialog);
+								if (event.dialogselectx) {
+									for (var i = 0; i < event.dialog.buttons.length; i++) {
+										event.dialog.buttons[i].classList.add('selectedx');
+									}
+								}
+							}
+						}
+						if (event.dialog) {
+							event.dialog.open();
+						} else if (event.prompt !== false) {
+							var tipText;
+							var handTip = event.handTip = dui.showHandTip();
+							if (typeof event.prompt == 'function') {
+								tipText = event.prompt(event);
+							} else if (typeof event.prompt == 'string') {
+								tipText = event.prompt;
+							}
+							
+							if (event.prompt2) {
+								if (tipText == null)
+									tipText = ''
+								
+								handTip.setInfomation(event.prompt2);
+							}
+							
+							if (tipText != undefined) {
+								event.dialog = handTip;
+								handTip.appendText(tipText)
+								handTip.strokeText();
+								handTip.show();
+							} else {
+								handTip.close();
+							}
+						}
+						game.pause();
+						game.countChoose();
+						event.choosing = true;
+					} else if (event.isOnline()) {
+						event.send();
+					} else {
+						event.result = 'ai';
+					}
+					"step 1"
+					if (event.result == 'ai') {
+						if (event.ai) {
+							event.choice = event.ai(event.getParent(), player);
+						}
+						event.result = {
+							bool: event.choice
+						};
+					}
+					_status.imchoosing = false;
+					event.choosing = false;
+					if (event.dialog) event.dialog.close();
+					event.resume();
+				};
+				EventContent.chooseTarget = function () {
+					"step 0"
+					if (event.isMine()) {
+						if (event.hsskill && !event.forced && _status.prehidden_skills.contains(event.hsskill)) {
+							ui.click.cancel();
+							return;
+						}
+						game.check();
+						game.pause();
+						if (event.createDialog && !event.dialog && Array.isArray(event.createDialog)) {
+							event.dialog = ui.create.dialog.apply(this, event.createDialog);
+						} else if (event.prompt !== false) {
+							var tipText;
+							var handTip = event.handTip = dui.showHandTip();
+							if (typeof event.prompt == 'function') {
+								tipText = event.prompt(event);
+							} else if (typeof event.prompt == 'string') {
+								tipText = event.prompt;
+							} else {
+								tipText = '请选择';
+								var range = get.select(event.selectTarget);
+								if (range[0] == range[1]) 
+									tipText += get.cnNumber(range[0]);
+								else if (range[1] == Infinity) 
+									tipText += '至少' + get.cnNumber(range[0]);
+								else 
+									tipText += get.cnNumber(range[0]) + '至' + get.cnNumber(range[1]);
+								
+								tipText += '个目标';
+							}
+							
+							if (event.prompt2) {
+								if (tipText == null)
+									tipText = ''
+								
+								handTip.setInfomation(event.prompt2);
+							}
+							
+							if (tipText != undefined) {
+								event.dialog = handTip;
+								handTip.appendText(tipText);
+								if (event.promptbar != 'none') {
+									event.promptbar = handTip.appendText(' 0 - ' + get.select(event.selectTarget)[1]);
+									event.promptbar.sels = 0;
+									event.promptbar.reqs = get.select(event.selectTarget)[1];
+									event.custom.add.target = function() {
+										var handTip = _status.event.dialog;
+										var promptbar = _status.event.promptbar;
+										if (promptbar.sels == ui.selected.cards.length)
+											return;
+										
+										promptbar.sels = ui.selected.targets.length;
+										promptbar.textContent = ' ' + promptbar.sels + ' - ' + promptbar.reqs;
+										handTip.strokeText();
+									}
+								}
+								handTip.strokeText();
+								handTip.show();
+							} else {
+								handTip.close();
+							}
+						} else if (get.itemtype(event.dialog) == 'dialog') {
+							event.dialog.open();
+						}
+					} else if (event.isOnline()) {
+						event.send();
+					} else {
+						event.result = 'ai';
+					}
+					"step 1"
+					if (event.result == 'ai') {
+						game.check();
+						if (ai.basic.chooseTarget(event.ai) || forced) {
+							ui.click.ok();
+						} else {
+							ui.click.cancel();
+						}
+					}
+					if (event.result.bool && event.animate !== false) {
+						for (var i = 0; i < event.result.targets.length; i++) {
+							event.result.targets[i].animate('target');
+						}
+					}
+					if (event.dialog) event.dialog.close();
+					event.resume();
+					"step 2"
+					if (event.onresult) {
+						event.onresult(event.result);
+					}
+					if (event.result.bool && event.autodelay && !event.isMine()) {
+						if (typeof event.autodelay == 'number') {
+							game.delayx(event.autodelay);
+						} else {
+							game.delayx();
+						}
+					}
+				};
+				EventContent.chooseToDiscard = function () {
+					"step 0"
+					if (event.autochoose()) {
+						event.result = {
+							bool: true,
+							autochoose: true,
+							cards: player.getCards(event.position),
+							rawcards: player.getCards(event.position),
+						}
+						for (var i = 0; i < event.result.cards.length; i++) {
+							if (!lib.filter.cardDiscardable(event.result.cards[i], player, event)) {
+								event.result.cards.splice(i--, 1);
+							}
+						}
+					} else {
+						if (game.modeSwapPlayer && !_status.auto && player.isUnderControl()) {
+							game.modeSwapPlayer(player);
+						}
+						event.rangecards = player.getCards(event.position);
+						for (var i = 0; i < event.rangecards.length; i++) {
+							if (lib.filter.cardDiscardable(event.rangecards[i], player, event)) {
+								event.rangecards.splice(i--, 1);
+							} else {
+								event.rangecards[i].uncheck('chooseToDiscard');
+							}
+						}
+						var range = get.select(event.selectCard);
+						game.check();
+						if (event.isMine()) {
+							if (event.hsskill && !event.forced && _status.prehidden_skills.contains(event.hsskill)) {
+								ui.click.cancel();
+								return;
+							}
+							game.pause();
+							if (range[1] > 1 && typeof event.selectCard != 'function') {
+								event.promptdiscard = ui.create.control('提示', function() {
+									ai.basic.chooseCard(event.ai);
+									if (_status.event.custom.add.card) {
+										_status.event.custom.add.card();
+									}
+									for (var i = 0; i < ui.selected.cards.length; i++) {
+										ui.selected.cards[i].updateTransform(true);
+									}
+								});
+							}
+							
+							if (Array.isArray(event.dialog)) {
+								event.dialog = ui.create.dialog.apply(this, event.dialog);
+								event.dialog.open();
+								event.dialog.classList.add('noselect');
+							} else if (event.prompt !== false) {
+								var tipText;
+								var handTip = event.handTip = dui.showHandTip();
+								if (typeof event.prompt == 'function') {
+									tipText = event.prompt(event);
+								} else if (typeof event.prompt == 'string') {
+									tipText = event.prompt;
+								} else {
+									tipText = '请弃置';
+									if (range[0] == range[1]) 
+										tipText += get.cnNumber(range[0]);
+									else if (range[1] == Infinity) 
+										tipText += '至少' + get.cnNumber(range[0]);
+									else 
+										tipText += get.cnNumber(range[0]) + '至' + get.cnNumber(range[1]);
+									
+									tipText += '张';
+									if (event.position == 'h' || event.position == undefined) 
+										tipText += '手';
+									if (event.position == 'e') 
+										tipText += '装备';
+									tipText += '牌';
+								}
+								
+								if (event.prompt2) {
+									if (tipText == null)
+										tipText = ''
+									
+									handTip.setInfomation(event.prompt2);
+								}
+								
+								if (tipText != undefined) {
+									event.dialog = handTip;
+									handTip.appendText(tipText);
+									if (Array.isArray(event.selectCard)) {
+										event.promptbar = handTip.appendText(' 0 - ' + event.selectCard[1]);
+										event.promptbar.sels = 0;
+										event.promptbar.reqs = event.selectCard[1];
+										event.custom.add.card = function() {
+											var handTip = _status.event.dialog;
+											var promptbar = _status.event.promptbar;
+											if (promptbar.sels == ui.selected.cards.length)
+												return;
+											
+											promptbar.sels = ui.selected.cards.length;
+											promptbar.textContent = ' ' + promptbar.sels + ' - ' + promptbar.reqs;
+											handTip.strokeText();
+										}
+									}
+									
+									handTip.strokeText();
+									handTip.show();
+								} else {
+									handTip.close();
+								}
+							} else if (get.itemtype(event.dialog) == 'dialog') {
+								event.dialog.style.display = '';
+								event.dialog.open();
+							}
+						} else if (event.isOnline()) {
+							event.send();
+						} else {
+							event.result = 'ai';
+						}
+					}
+					"step 1"
+					if (event.result == 'ai') {
+						game.check();
+						if (ai.basic.chooseCard(event.ai) || forced) {
+							ui.click.ok();
+						} else if (event.skill) {
+							var skill = event.skill;
+							ui.click.cancel();
+							event._aiexclude.add(skill);
+							event.redo();
+							game.resume();
+						} else {
+							ui.click.cancel();
+						}
+					}
+					if (event.rangecards) {
+						for (var i = 0; i < event.rangecards.length; i++) {
+							event.rangecards[i].recheck('chooseToDiscard');
+						}
+					}
+					"step 2"
+					event.resume();
+					if (event.promptdiscard) {
+						event.promptdiscard.close();
+					}
+					"step 3"
+					if (event.result.bool && event.result.cards && event.result.cards.length && !game.online && event.autodelay && !event.isMine()) {
+						if (typeof event.autodelay == 'number') {
+							game.delayx(event.autodelay);
+						} else {
+							game.delayx();
+						}
+					}
+					"step 4"
+					if (event.logSkill && event.result.bool && !game.online) {
+						if (typeof event.logSkill == 'string') {
+							player.logSkill(event.logSkill);
+						} else if (Array.isArray(event.logSkill)) {
+							player.logSkill.apply(player, event.logSkill);
+						}
+					}
+					if (!game.online) {
+						if (typeof event.delay == 'boolean') {
+							event.done = player.discard(event.result.cards).set('delay', event.delay);
+						} else {
+							event.done = player.discard(event.result.cards);
+						}
+					}
+					if (event.dialog && event.dialog.close) event.dialog.close();
+				};
+				EventContent.chooseToRespond = function () {
+					"step 0"
+					if (event.responded) {
+						event.dialog = undefined;
+						return;
+					}
+					var skills = player.getSkills(true);
+					game.expandSkills(skills);
+					for (var i = 0; i < skills.length; i++) {
+						var info = lib.skill[skills[i]];
+						if (info && info.onChooseToRespond) {
+							info.onChooseToRespond(event);
+						}
+					}
+					_status.noclearcountdown = true;
+					if (!_status.connectMode && lib.config.skip_shan && event.autochoose && event.autochoose()) {
+						event.result = {
+							bool: false
+						};
+					} else {
+						if (game.modeSwapPlayer && !_status.auto && player.isUnderControl()) {
+							game.modeSwapPlayer(player);
+						}
+						if (event.isMine()) {
+							if (event.hsskill && !event.forced && _status.prehidden_skills.contains(event.hsskill)) {
+								ui.click.cancel();
+								return;
+							}
+							var ok = game.check();
+							if (!ok) {
+								game.pause();
+								var tipText;
+								var handTip = event.handTip = dui.showHandTip();
+								if (event.openskilldialog) {
+									tipText = event.openskilldialog;
+									event.openskilldialog = undefined;
+								} else if (event.prompt !== false) {
+									if (typeof event.prompt == 'function') {
+										tipText = event.prompt(event);
+									} else if (typeof event.prompt == 'string') {
+										tipText = event.prompt;
+									} else {
+										tipText = '请打出' + get.cnNumber(event.selectCard[0]) + '张';
+										if (event.source) {
+											handTip.appendText(get.translation(event.source), 'player');
+											handTip.appendText('使用了');
+											handTip.appendText(get.translation(event.getParent().name), 'card');
+											tipText = '，' + tipText;
+										}
+										
+										if (event.filter && event.filter.name) {
+											handTip.appendText(tipText);
+											handTip.appendText(get.translation(event.filter.name), 'card');
+											tipText = '';
+										} else {
+											tipText += '牌';
+										}
+									}
+									
+									if (event.prompt2) {
+										if (tipText == null)
+											tipText = ''
+										
+										handTip.setInfomation(event.prompt2);
+									}
+								}
+								
+								if (tipText != undefined) {
+									event.dialog = handTip;
+									handTip.appendText(tipText)
+									handTip.strokeText();
+									handTip.show();
+								} else {
+									handTip.close();
+								}
+							}
+						} else if (event.isOnline()) {
+							event.send();
+						} else {
+							event.result = 'ai';
+						}
+					}
+					"step 1"
+					if (event.result == 'ai') {
+						var ok = game.check();
+						if (ok) {
+							ui.click.ok();
+						} else if (ai.basic.chooseCard(event.ai)) {
+							ui.click.ok();
+							event._aiexcludeclear = true;
+						} else if (event.skill && !event.norestore) {
+							var skill = event.skill;
+							ui.click.cancel();
+							event._aiexclude.add(skill);
+							var info = get.info(skill);
+							if (info.sourceSkill) {
+								event._aiexclude.add(info.sourceSkill);
+							}
+							event.redo();
+							game.resume();
+						} else {
+							ui.click.cancel();
+						}
+						if (event.aidelay && event.result && event.result.bool) {
+							game.delayx();
+						}
+					}
+					"step 2"
+					event.resume();
+					if (event.result) {
+						if (event.result.skill) {
+							var info = get.info(event.result.skill);
+							if (info && info.chooseButton) {
+								if (event.dialog && typeof event.dialog == 'object') event.dialog.close();
+								var dialog = info.chooseButton.dialog(event, player);
+								if (info.chooseButton.chooseControl) {
+									var next = player.chooseControl(info.chooseButton.chooseControl(event, player));
+									next.dialog = dialog;
+									next.set('ai', info.chooseButton.check ||
+									function() {
+										return 0;
+									});
+								} else {
+									var next = player.chooseButton(dialog);
+									next.set('ai', info.chooseButton.check ||
+									function() {
+										return 1;
+									});
+									next.set('filterButton', info.chooseButton.filter ||
+									function() {
+										return true;
+									});
+									next.set('selectButton', info.chooseButton.select || 1);
+								}
+								event.buttoned = event.result.skill;
+							} else if (info && info.precontent && !game.online) {
+								var next = game.createEvent('pre_' + event.result.skill);
+								next.setContent(info.precontent);
+								next.set('result', event.result);
+								next.set('player', player);
+							}
+						}
+					}
+					"step 3"
+					if (event.buttoned) {
+						if (result.bool || result.control && result.control != 'cancel2') {
+							var info = get.info(event.buttoned).chooseButton;
+							lib.skill[event.buttoned + '_backup'] = info.backup(info.chooseControl ? result: result.links, player);
+							lib.skill[event.buttoned + '_backup'].sourceSkill = event.buttoned;
+							if (game.online) {
+								event._sendskill = [event.buttoned + '_backup', lib.skill[event.buttoned + '_backup']];
+							}
+							event.backup(event.buttoned + '_backup');
+							if (info.prompt) {
+								event.openskilldialog = info.prompt(info.chooseControl ? result: result.links, player);
+							}
+						} else {
+							ui.control.animate('nozoom', 100);
+							event._aiexclude.add(event.buttoned);
+						}
+						event.goto(0);
+						delete event.buttoned;
+					}
+					"step 4"
+					_status.noclearcountdown = undefined;
+					if (event.skillDialog && get.objtype(event.skillDialog) == 'div') {
+						event.skillDialog.close();
+					}
+					if (event.result.bool && !game.online) {
+						if (event.result._sendskill) {
+							lib.skill[event.result._sendskill[0]] = event.result._sendskill[1];
+						}
+						var info = get.info(event.result.skill);
+						if (event.onresult) {
+							event.onresult(event.result);
+						}
+						if (event.result.skill) {
+							if (info.direct && !info.clearTime) {
+								_status.noclearcountdown = true;
+							}
+						}
+						if (event.logSkill) {
+							if (typeof event.logSkill == 'string') {
+								player.logSkill(event.logSkill);
+							} else if (Array.isArray(event.logSkill)) {
+								player.logSkill.apply(player, event.logSkill);
+							}
+						}
+						if (!event.result.card && event.result.skill) {
+							event.result.used = event.result.skill;
+							player.useSkill(event.result.skill, event.result.cards, event.result.targets);
+						} else {
+							if (info && info.prerespond) {
+								info.prerespond(event.result, player);
+							}
+							var next = player.respond(event.result.cards, event.result.card, event.animate, event.result.skill, event.source);
+							if (event.result.noanimate) next.animate = false;
+							if (event.parent.card && event.parent.type == 'card') {
+								next.set('respondTo', [event.parent.player, event.parent.card]);
+							}
+							if (event.noOrdering) next.noOrdering = true;
+						}
+					} else if (event._sendskill) {
+						event.result._sendskill = event._sendskill;
+					}
+					if (event.dialog && event.dialog.close) event.dialog.close();
+					if (!_status.noclearcountdown) {
+						game.stopCountChoose();
+					}
+				};
+				EventContent.chooseToUse = function () {
+					"step 0"
+					if (event.responded) return;
+					if (game.modeSwapPlayer && !_status.auto && player.isUnderControl() && !lib.filter.wuxieSwap(event)) {
+						game.modeSwapPlayer(player);
+					}
+					var skills = player.getSkills(true);
+					game.expandSkills(skills);
+					for (var i = 0; i < skills.length; i++) {
+						var info = lib.skill[skills[i]];
+						if (info && info.onChooseToUse) {
+							info.onChooseToUse(event);
+						}
+					}
+					_status.noclearcountdown = true;
+					if (event.type == 'phase') {
+						if (event.isMine()) {
+							event.endButton = ui.create.control('结束回合', 'stayleft',
+							function() {
+								if (_status.event.skill) {
+									ui.click.cancel();
+								}
+								ui.click.cancel();
+							});
+							event.fakeforce = true;
+						} else {
+							if (event.endButton) {
+								event.endButton.close();
+								delete event.endButton;
+							}
+							event.fakeforce = false;
+						}
+					}
+					if (event.player.isUnderControl() && !_status.auto) {
+						event.result = {
+							bool: false
+						}
+						return;
+					} else if (event.isMine()) {
+						if (event.hsskill && !event.forced && _status.prehidden_skills.contains(event.hsskill)) {
+							ui.click.cancel();
+							return;
+						}
+						if (event.type == 'wuxie') {
+							if (ui.tempnowuxie) {
+								var triggerevent = event.getTrigger();
+								if (triggerevent && triggerevent.targets && triggerevent.num == triggerevent.targets.length - 1) {
+									ui.tempnowuxie.close();
+								}
+							}
+							if (lib.filter.wuxieSwap(event)) {
+								event.result = {
+									bool: false
+								}
+								return;
+							}
+						}
+						var ok = game.check();
+						if (!ok || !lib.config.auto_confirm) {
+							game.pause();
+							if (lib.config.enable_vibrate && player._noVibrate) {
+								delete player._noVibrate;
+								game.vibrate();
+							}
+						}
+						if (!ok) {
+							var tipText;
+							var handTip = event.handTip = dui.showHandTip();
+							if (event.openskilldialog) {
+								tipText = event.openskilldialog;
+								event.openskilldialog = undefined;
+							} else if (event.prompt !== false) {
+								if (typeof event.prompt == 'function') {
+									tipText = event.prompt(event);
+								} else if (typeof event.prompt == 'string') {
+									tipText = event.prompt;
+								} else {
+									if (typeof event.filterCard == 'object') {
+										var filter = event.filterCard;
+										tipText = '请使用' + get.cnNumber(event.selectCard[0]) + '张'
+										if (filter.name) {
+											tipText += get.translation(filter.name);
+										} else {
+											tipText += '牌';
+										}
+									} else {
+										tipText = '请选择一张卡牌';
+									}
+									
+									if (event.type == 'phase' && event.isMine()) {
+										handTip.appendText('出牌阶段', 'phase');
+										tipText = '，' + tipText
+									}
+								}
+								
+								if (event.prompt2) {
+									if (tipText == null)
+										tipText = ''
+									
+									handTip.setInfomation(event.prompt2);
+								}
+							}
+							
+							if (tipText != undefined) {
+								event.dialog = handTip;
+								handTip.appendText(tipText);
+								handTip.strokeText();
+								handTip.show();
+							} else {
+								handTip.close();
+							}
+						}
+					} else if (event.isOnline()) {
+						event.send();
+					} else {
+						event.result = 'ai';
+					}
+					"step 1"
+					if (event.result == 'ai') {
+						var ok = game.check();
+						if (ok) {
+							ui.click.ok();
+						} else if (ai.basic.chooseCard(event.ai1)) {
+							if (ai.basic.chooseTarget(event.ai2)) {
+								ui.click.ok();
+								event._aiexcludeclear = true;
+							} else {
+								if (!event.norestore) {
+									if (event.skill) {
+										var skill = event.skill;
+										ui.click.cancel();
+										event._aiexclude.add(skill);
+										var info = get.info(skill);
+										if (info.sourceSkill) {
+											event._aiexclude.add(info.sourceSkill);
+										}
+									} else {
+										get.card(true).aiexclude();
+										game.uncheck();
+									}
+									event.redo();
+									game.resume();
+								} else {
+									ui.click.cancel();
+								}
+							}
+						} else if (event.skill && !event.norestore) {
+							var skill = event.skill;
+							ui.click.cancel();
+							event._aiexclude.add(skill);
+							var info = get.info(skill);
+							if (info.sourceSkill) {
+								event._aiexclude.add(info.sourceSkill);
+							}
+							event.redo();
+							game.resume();
+						} else {
+							ui.click.cancel();
+						}
+						if (event.aidelay && event.result && event.result.bool) {
+							game.delayx();
+						}
+					}
+					"step 2"
+					if (event.endButton) {
+						event.endButton.close();
+						delete event.endButton;
+					}
+					event.resume();
+					if (event.result) {
+						if (event.result.skill) {
+							var info = get.info(event.result.skill);
+							if (info && info.chooseButton) {
+								if (event.dialog && typeof event.dialog == 'object') event.dialog.close();
+								var dialog = info.chooseButton.dialog(event, player);
+								if (info.chooseButton.chooseControl) {
+									var next = player.chooseControl(info.chooseButton.chooseControl(event, player));
+									next.dialog = dialog;
+									next.set('ai', info.chooseButton.check ||
+									function() {
+										return 0;
+									});
+								} else {
+									var next = player.chooseButton(dialog);
+									next.set('ai', info.chooseButton.check ||
+									function() {
+										return 1;
+									});
+									next.set('filterButton', info.chooseButton.filter ||
+									function() {
+										return true;
+									});
+									next.set('selectButton', info.chooseButton.select || 1);
+								}
+								event.buttoned = event.result.skill;
+							} else if (info && info.precontent && !game.online && !event.nouse) {
+								var next = game.createEvent('pre_' + event.result.skill);
+								next.setContent(info.precontent);
+								next.set('result', event.result);
+								next.set('player', player);
+							}
+						}
+					}
+					"step 3"
+					if (event.buttoned) {
+						if (result.bool || result.control && result.control != 'cancel2') {
+							var info = get.info(event.buttoned).chooseButton;
+							lib.skill[event.buttoned + '_backup'] = info.backup(info.chooseControl ? result: result.links, player);
+							lib.skill[event.buttoned + '_backup'].sourceSkill = event.buttoned;
+							if (game.online) {
+								event._sendskill = [event.buttoned + '_backup', lib.skill[event.buttoned + '_backup']];
+							}
+							event.backup(event.buttoned + '_backup');
+							if (info.prompt) {
+								event.openskilldialog = info.prompt(info.chooseControl ? result: result.links, player);
+							}
+						} else {
+							ui.control.animate('nozoom', 100);
+							event._aiexclude.add(event.buttoned);
+						}
+						event.goto(0);
+						delete event.buttoned;
+					}
+					"step 4"
+					if (event._aiexcludeclear) {
+						delete event._aiexcludeclear;
+						event._aiexclude.length = 0;
+					}
+					delete _status.noclearcountdown;
+					if (event.skillDialog && get.objtype(event.skillDialog) == 'div') {
+						event.skillDialog.close();
+					}
+					if (event.result && event.result.bool && !game.online && !event.nouse) {
+						player.useResult(event.result, event);
+					} else if (event._sendskill) {
+						event.result._sendskill = event._sendskill;
+					}
+					if (event.dialog && typeof event.dialog == 'object') event.dialog.close();
+					if (!_status.noclearcountdown) {
+						game.stopCountChoose();
+					}
+					"step 5"
+					if (event._result && event.result) {
+						event.result.result = event._result;
+					}
+				};
+				EventContent.gameDraw = function () {
+					"step 0"
+					if (_status.brawl && _status.brawl.noGameDraw) {
+						event.finish();
+						return;
+					}
+					var end = player;
+					var numx = num;
+					do {
+						if (typeof num == 'function') {
+							numx = num(player);
+						}
+						if (player.getTopCards) player.directgain(player.getTopCards(numx));
+						else player.directgain(get.cards(numx));
+						if (player.singleHp === true && get.mode() != 'guozhan' && (lib.config.mode != 'doudizhu' || _status.mode != 'online')) {
+							player.doubleDraw();
+						}
+						player._start_cards = player.getCards('h');
+						player = player.next;
+					} while ( player != end );
+					event.changeCard = get.config('change_card');
+					if (_status.connectMode || (lib.config.mode == 'doudizhu' && _status.mode == 'online') || lib.config.mode != 'identity' && lib.config.mode != 'guozhan' && lib.config.mode != 'doudizhu') {
+						event.changeCard = 'disabled';
+					}
+					"step 1"
+					if (event.changeCard != 'disabled' && !_status.auto) {
+						event.dialog = dui.showHandTip('是否使用手气卡？');
+						event.dialog.strokeText();
+						ui.create.confirm('oc');
+						event.custom.replace.confirm = function(bool) {
+							_status.event.bool = bool;
+							game.resume();
+						}
+					} else {
+						event.finish();
+					}
+					"step 2"
+					if (event.changeCard == 'once') {
+						event.changeCard = 'disabled';
+					} else if (event.changeCard == 'twice') {
+						event.changeCard = 'once';
+					} else if (event.changeCard == 'disabled') {
+						event.bool = false;
+						return;
+					}
+					_status.imchoosing = true;
+					event.switchToAuto = function() {
+						_status.event.bool = false;
+						game.resume();
+					}
+					game.pause();
+					"step 3"
+					_status.imchoosing = false;
+					if (event.bool) {
+						if (game.changeCoin) {
+							game.changeCoin( - 3);
+						}
+						var hs = game.me.getCards('h');
+						game.addVideo('lose', game.me, [get.cardsInfo(hs), [], [], []]);
+						for (var i = 0; i < hs.length; i++) {
+							hs[i].discard(false);
+						}
+						game.me.directgain(get.cards(hs.length));
+						event.goto(2);
+					} else {
+						if (event.dialog) event.dialog.close();
+						if (ui.confirm) ui.confirm.close();
+						game.me._start_cards = game.me.getCards('h');
+						event.finish();
+					}
+				};
+			})(EventContent);
+			
+			var Skill = {};
+			Skill._save = {
+				priority:5,
+				forced:true,
+				popup:false,
+				filter:function(){ return false; },
+				content:function(){
+					"step 0"
+					event.dying = trigger.player;
+					if (!event.acted) event.acted = [];
+					"step 1"
+					if (trigger.player.isDead()) {
+						event.finish();
+						return;
+					}
+					event.acted.push(player);
+					if (lib.config.tao_enemy && event.dying.side != player.side && lib.config.mode != 'identity' && lib.config.mode != 'guozhan' && !event.dying.hasSkillTag('revertsave')) {
+						event._result = {
+							bool: false
+						}
+					} else if (player.canSave(event.dying)) {
+						player.chooseToUse({
+							filterCard: function(card, player, event) {
+								event = event || _status.event;
+								return lib.filter.cardSavable(card, player, event.dying);
+							},
+							dyingPlayer: trigger.player,
+							filterTarget: trigger.player,
+							prompt:function(event){
+								var handTip = event.handTip;
+								var player = event.player;
+								var target = event.dyingPlayer;
+								if (player != target) {
+									handTip.appendText(get.translation(target), 'player');
+									handTip.appendText('濒死，需要');
+									handTip.appendText((Math.abs(target.hp) + 1), 'number');
+									handTip.appendText('个桃，是否对其使用桃？');
+								} else {
+									handTip.appendText('你当前体力值为');
+									handTip.appendText(target.hp, 'number');
+									handTip.appendText('，需要');
+									handTip.appendText((Math.abs(target.hp) + 1), 'number');
+									handTip.appendText('个桃，是否出桃？');
+								}
+								
+								return '';
+							},
+							ai1:function(card) {
+								if (typeof card == 'string') {
+									var info = get.info(card);
+									if (info.ai && info.ai.order) {
+										if (typeof info.ai.order == 'number') {
+											return info.ai.order;
+										} else if (typeof info.ai.order == 'function') {
+											return info.ai.order();
+										}
+									}
+								}
+								return 1;
+							},
+							ai2: get.effect_use,
+							type: 'dying',
+							targetRequired: true,
+							dying: event.dying
+						});
+					} else {
+						event._result = {
+							bool: false
+						}
+					}
+					"step 2"
+					if (result.bool) {
+						if (trigger.player.hp <= 0 && !trigger.player.nodying && trigger.player.isAlive() && !trigger.player.isOut() && !trigger.player.removed) event.goto(0);
+						else trigger.untrigger();
+					} else {
+						for (var i = 0; i < 20; i++) {
+							if (event.acted.contains(event.player.next)) {
+								break;
+							} else {
+								event.player = event.player.next;
+								if (!event.player.isOut()) {
+									event.goto(1);
+									break;
+								}
+							}
+						}
+					}
+				}
+			};
+			
+			var Click = {};
+			(function(Click){
+				Click.skill = function (skill) {
+					var info = get.info(skill);
+					var event = _status.event;
+					event.backup(skill);
+					if (info.filterCard && info.discard != false && info.lose != false && !info.viewAs) {
+						var cards = event.player.getCards(event.position);
+						for (var i = 0; i < cards.length; i++) {
+							if (!lib.filter.cardDiscardable(cards[i], event.player)) {
+								cards[i].uncheck('useSkill');
+							}
+						}
+					}
+					if (typeof event.skillDialog == 'object') {
+						event.skillDialog.close();
+					}
+					if (event.isMine()) {
+						event.skillDialog = true;
+					}
+					game.uncheck();
+					game.check();
+					if (event.skillDialog) {
+						var title = get.translation(skill);
+						var intro;
+						if (info.prompt) {
+							if (typeof info.prompt == 'function') {
+								intro = info.prompt(event);
+							} else {
+								intro = info.prompt;
+							}
+						} else if (info.promptfunc) {
+							intro = info.promptfunc(event, event.player);
+						} else if (lib.dynamicTranslate[skill]) {
+							intro = lib.dynamicTranslate[skill](event.player, skill);
+						} else if (lib.translate[skill + '_info']) {
+							intro = lib.translate[skill + '_info'];
+						}
+						
+						if (intro != undefined) {
+							if (intro.length > 25) {
+								event.skillDialog = ui.create.dialog(title, '<div><div style="width:100%">' + intro + '</div></div>');
+							} else {
+								var handTip = dui.showHandTip(intro);
+								handTip.strokeText();
+								event.skillDialog = handTip;
+							}
+						}
+					}
+				};
+				
+			})(Click);
+			
+			var Create = {};
+			(function(Create){
+				Create.prebutton = function (item, type, position, noclick) {
+					var button = ui.create.div();
+					button.style.display = 'none';
+					button.link = item;
+					button.activate = function() {
+						var node = ui.create.button(item, type, undefined, noclick, button);
+						node.activate = undefined;
+					};
+					_status.prebutton.push(button);
+					if (position) position.appendChild(button);
+					return button;
+				};
+				
+			})(Create);
+			
+			overrides(lib.element.player, Player);
+			overrides(lib.element.content, EventContent);
+			overrides(lib.skill, Skill);
+			overrides(ui.click, Click);
+			overrides(ui.create, Create);
 			
 			var ride = {};
 			ride.lib = {
@@ -272,6 +1569,10 @@ content:function(config, pack){
 									card[2] = 'sha';
 									card[3] = 'ice';
 								}
+								if(card[2]=='cisha'){
+									card[2] = 'sha';
+									card[3] = 'stab';
+								}
 							} else if (typeof card == 'object') {
 								card = [card.suit, card.number, card.name, card.nature];
 							}
@@ -351,7 +1652,10 @@ content:function(config, pack){
 									if (lib.card[bg].modeimage) {
 										this.node.image.setBackgroundImage('image/mode/' + lib.card[bg].modeimage + '/card/' + bg + '.png');
 									} else {
-										this.node.image.setBackgroundImage('image/card/' + bg + '.png');
+										if (bg == 'sha' && card[3] == 'stab') 
+											this.node.image.setBackgroundImage('image/card/cisha.png');
+										else
+											this.node.image.setBackgroundImage('image/card/' + bg + '.png');
 									}
 								}
 							// } else if (lib.card[bg].image == 'background') {
@@ -484,6 +1788,9 @@ content:function(config, pack){
 									cardname = '冰' + cardname;
 									filename = 'bingsha';
 									this.node.image.classList.add('ice');
+								} else if (card[3] == 'stab') {
+									name = '刺' + name;
+									filename = 'cisha';
 								}
 							}
 							
@@ -571,45 +1878,51 @@ content:function(config, pack){
 							if (imgFormat != 'off'){
 								this.classList.add('decade-card');
 								if (!this.classList.contains('infohidden')) {
-									var res = decadeUI.resources.cards[filename];
-									if (!res) {
-										res = {
-											name: filename,
-											chinese: '',
-											image: undefined,		// 图片
-											loaded: undefined, 		// 是否已加载资源
-											rawUrl: undefined, 			// 被替换的图片地址	
-										};
-										
-										decadeUI.resources.cards[filename] = res;
-									}
-									
-									if (res.loaded !== false) {
-										if (!res.loaded) {
-											var url = lib.assetURL + 'extension/' + extensionName + '/image/card/' + res.name + '.' + imgFormat;
-											var image = new Image();
-											
-											image.onload = function(){
-												res.loaded = true;
-												image.onload = null;
+									var res = dui.statics.cards;
+									var asset = res[filename];
+									if (res.READ_OK) {
+										if (asset == undefined) {
+											this.classList.remove('decade-card');
+										} else {
+											this.style.background = 'url("' + asset.url + '")';
+										}
+									} else {
+										var url = lib.assetURL + 'extension/' + extensionName + '/image/card/' + filename + '.' + imgFormat;
+										if (!asset) {
+											res[filename] = asset = {
+												name: filename,
+												url: undefined,			// 图片路径
+												loaded: undefined, 		// 是否加载
+												rawUrl: undefined, 		// 原图片地址	
 											};
-											
-											var card = this;
-											image.onerror = function(){
-												res.loaded = false;
-												image.onerror = null;
-												card.style.background = image.rawUrl;
-												card.classList.remove('decade-card');
-											}
-											
-											image.rawUrl = this.style.background || this.style.backgroundImage;
-											image.src = url;
-											res.image = image;
 										}
 										
-										this.style.background = 'url("' + res.image.src + '")';
-									} else {
-										this.classList.remove('decade-card');
+										if (asset.loaded !== false) {
+											if (asset.loaded == undefined) {
+												var image = new Image();
+												image.onload = function(){
+													asset.loaded = true;
+													image.onload = undefined;
+												};
+												
+												var card = this;
+												image.onerror = function(){
+													asset.loaded = false;
+													image.onerror = undefined;
+													card.style.background = asset.rawUrl;
+													card.classList.remove('decade-card');
+												}
+												
+												asset.url = url;
+												asset.rawUrl = this.style.background || this.style.backgroundImage;
+												asset.image = image;
+												image.src = url;
+											}
+											
+											this.style.background = 'url("' + url + '")';
+										} else {
+											this.classList.remove('decade-card');
+										}
 									}
 								}
 							} else {
@@ -630,7 +1943,7 @@ content:function(config, pack){
 								if (this._transform && this.parentNode && this.parentNode.parentNode && 
 									this.parentNode.parentNode.parentNode == ui.me && (!_status.mousedown || _status.mouseleft)) {
 									if (bool) {
-										this.style.transform = this._transform + ' translateY(-' + (decadeUI.isMobile() ? 15: 20) + 'px)';
+										this.style.transform = this._transform + ' translateY(-' + (decadeUI.isMobile() ? 10: 12) + 'px)';
 									} else {
 										this.style.transform = this._transform || '';
 									}
@@ -674,8 +1987,6 @@ content:function(config, pack){
 							setTimeout(function(player){
 								player.style.animation = '';
 							}, 500, player)
-							
-							return result;
 						},
 					},
 					
@@ -754,109 +2065,6 @@ content:function(config, pack){
 					},
 					
 					player:{
-						// getCards:function(filter, filter2){
-							// if (typeof filter != 'string') filter = 'h';
-							
-							// var cards=[], cards1=[];
-							// var i,j;
-							
-							// for (i = 0; i < filter.length; i++) {
-								// switch (filter[i]) {
-									// case 'h':
-										// var node;
-										// var nodes = this.node.handcards1.childNodes;
-										// for (j = 0; j < nodes.length; j++) {
-											// node = nodes[j];
-											// if (!node.classList.contains('removing') && !node.classList.contains('glows')) cards.push(node);
-										// }
-										// nodes = this.node.handcards2.childNodes;
-										// for (j = 0; j < nodes.length; j++) {
-											// node = nodes[j];
-											// if (!node.classList.contains('removing') && !node.classList.contains('glows')) cards.push(node);
-										// }
-										// break;
-										
-									// case 's':
-										// var node;
-										// var nodes = this.node.handcards1.childNodes;
-										// for (j = 0; j < nodes.length; j++) {
-											// node = nodes[j];
-											// if (!node.classList.contains('removing') && node.classList.contains('glows')) cards.push(node);
-										// }
-										// nodes = this.node.handcards2.childNodes;
-										// for (j = 0; j < nodes.length; j++) {
-											// node = nodes[j];
-											// if (!node.classList.contains('removing') && node.classList.contains('glows')) cards.push(node);
-										// }
-										// break;
-										
-									// case 'e':
-										// var node;
-										// var nodes = this.node.equips.childNodes;
-										// for (j = 0; j < nodes.length; j++) {
-											// node = nodes[j];
-											// if (!node.classList.contains('removing') && !node.classList.contains('feichu')) cards.push(node);
-										// }
-										// break;
-									
-									// case 'j':
-										// var node;
-										// var nodes = this.node.equips.childNodes;
-										// for (j = 0; j < nodes.length; j++) {
-											// node = nodes[j];
-											// if (!node.classList.contains('removing') && !node.classList.contains('feichu')) {
-												// cards.push(node);
-												// if (node.viewAs && arguments.length > 1) {
-													// node.tempJudge = node.name;
-													// node.name = node.viewAs;
-													// cards1.push(node);
-												// }
-											// }
-										// }
-										// break;
-								// }
-							// }
-							// if (arguments.length == 1) return cards; 
-							
-							// if (filter2) {
-								// if (typeof filter2 == 'string') {
-									// for (i = 0; i < cards.length; i++) {
-										// if (get.name(cards[i]) != filter2) {
-											// cards.splice(i--, 1);
-										// }
-									// }
-								// } else if (typeof filter2 == 'object') {
-									// for (i = 0; i < cards.length; i++) {
-										// for (j in filter2) {
-											// var value;
-											// if (j == 'type' || j == 'subtype' || j == 'color' || j == 'suit' || j == 'number') {
-												// value = get[j](cards[i]);
-											// } else {
-												// value = cards[i][j];
-											// }
-											// if ((typeof filter2[j] == 'string' && value != filter2[j]) || (Array.isArray(filter2[j]) && !filter2[j].contains(value))){
-												// cards.splice(i--,1);
-												// break;
-											// }
-										// }
-									// }
-								// } else if(typeof filter2 == 'function') {
-									// for (i = 0; i < cards.length; i++) {
-										// if (!filter2(cards[i])) {
-											// cards.splice(i--,1);
-										// }
-									// }
-								// }
-							// }
-							// for ( i = 0; i < cards1.length; i++){
-								// if (cards1[i].tempJudge) {
-									// cards1[i].name = cards1[i].tempJudge;
-									// cards1[i].tempJudge = undefined;
-								// }
-							// }
-							// return cards;
-						// },
-						
 						mark:function(item, info, skill){
 							if (get.itemtype(item) == 'cards') {
 								var marks = new Array(item.length);
@@ -992,6 +2200,7 @@ content:function(config, pack){
 							var dynamic = this.dynamic;
 							if (!dynamic) {
 								dynamic = new duilib.DynamicPlayer('assets/dynamic/');
+								dynamic.dprAdaptive = true;
 								this.dynamic = dynamic;
 								this.$dynamicWrap.appendChild(dynamic.canvas);
 							} else {
@@ -1019,14 +2228,16 @@ content:function(config, pack){
 								
 								animation.clip = { 
 									x: [0, deputy ? 0.5 : 0],
-									y: 0, width: [0, 0.5], 
+									y: 0,
+									width: [0, 0.5], 
 									height:[0, 1], 
 									clipParent: true
 								};
 							}
 							
 							if (this.$dynamicWrap.parentNode != this) this.appendChild(this.$dynamicWrap);
-							dynamic.dprAdaptive = decadeUI.config.dynamicAdaptiveHD ? true : false;
+							
+							dynamic.outcropMask = duicfg.dynamicSkinOutcrop;
 							var avatar = dynamic.play(animation);
 							if (deputy === true) {
 								dynamic.deputy = avatar;
@@ -1319,7 +2530,7 @@ content:function(config, pack){
 						};
 						
 						img.onerror = function () {
-							intro.style.fontFamily = 'shousha';
+							intro.style.fontFamily = 'fzhtk';
 							intro.style.fontSize = '16px';
 							intro.style.top = 'auto';
 							intro.style.bottom = '6px';
@@ -1627,8 +2838,6 @@ content:function(config, pack){
 						var dialog = decadeUI.element.create('dialog');
 						dialog.contentContainer = decadeUI.element.create('content-container', dialog);
 						dialog.content = decadeUI.element.create('content', dialog.contentContainer);
-						// dialog.contentContainer = decadeUI.element.create('dui-container', dialog);
-						// dialog.content = decadeUI.element.create('dui-content', dialog.contentContainer);
 						dialog.buttons = [];
 						for (i in lib.element.dialog) dialog[i] = lib.element.dialog[i];
 						for (i = 0; i < arguments.length; i++) {
@@ -2140,11 +3349,6 @@ content:function(config, pack){
 								ok = false;
 							}
 						}
-
-						// if (lib.config.popequip && get.is.phoneLayout() && typeof event.position == 'string' && event.position.indexOf('e') != -1 && player.node.equips.querySelector('.card.selectable')) {
-							// player.node.equips.classList.add('popequip');
-							// auto_confirm = false;
-						// }
 					}
 					if (custom.add.card) {
 						custom.add.card();
@@ -2735,10 +3939,7 @@ content:function(config, pack){
 				ui.control.id = 'dui-controls';
 				
 				decadeUI.config.update();
-				
-				
-				// ui.arena.appendChild(ui.cardPile);
-			    return result;
+				return result;
 			};
 			
 			ui.create.me = function(hasme){
@@ -2917,118 +4118,118 @@ content:function(config, pack){
 								// }
 							// };
 							
-							var fileName;
+							var filename;
 							var checked;
 							var identity = this.parentNode.dataset.color;
 							var gameMode = get.mode();
 							switch (value) {
 								case '猜':
-									fileName = 'cai';
+									filename = 'cai';
 									if (_status.mode == 'purple' && identity == 'cai') {
-										fileName += '_blue';
+										filename += '_blue';
 										checked = true;
 									}
 									break;
 								case '友':
-									fileName = 'friend';
+									filename = 'friend';
 									break;
 								case '敌':
-									fileName = 'enemy';
+									filename = 'enemy';
 									break;
 								case '反':
-									fileName = 'fan';
+									filename = 'fan';
 									if (get.mode() == 'doudizhu') {
-										fileName = 'nongmin';
+										filename = 'nongmin';
 										checked = true;
 									}
 									break;
 								case '主':
-									fileName = 'zhu';
+									filename = 'zhu';
 									if (get.mode() == 'versus' && get.translation(player.side + 'Color') == 'wei') { 
-										fileName += '_blue';
+										filename += '_blue';
 										this.player.classList.add('opposite-camp');
 										checked = true;
 									} else if (get.mode() == 'doudizhu') {
-										fileName = 'dizhu';
+										filename = 'dizhu';
 										checked = true;
 									}
 									break;
 								case '忠':
-									fileName = 'zhong';
+									filename = 'zhong';
 									if (gameMode == 'identity' && _status.mode == 'purple') {
-										fileName = 'qianfeng';
+										filename = 'qianfeng';
 									} else if (get.mode() == 'versus' && get.translation(player.side + 'Color') == 'wei') { 
-										fileName += '_blue';
+										filename += '_blue';
 										this.player.classList.add('opposite-camp');
 										checked = true;
 									}
 									break;
 								case '内':
 									if (_status.mode == 'purple') { 
-										fileName = identity == 'rNei' ? 'xizuo' : 'xizuo_blue';
+										filename = identity == 'rNei' ? 'xizuo' : 'xizuo_blue';
 										checked = true;
 									} else {
-										fileName = 'nei';
+										filename = 'nei';
 									}
 									break;
 								case '野':
-									fileName = 'ye';
+									filename = 'ye';
 									break;
 								case '首':
-									fileName = 'zeishou';
+									filename = 'zeishou';
 									break;
 								case '帅':
-									fileName = 'zhushuai';
+									filename = 'zhushuai';
 									break;
 								case '将':
-									fileName = 'dajiang';
+									filename = 'dajiang';
 									if (_status.mode == 'three' || get.translation(player.side + 'Color') == 'wei') {
-										fileName = 'zhushuai_blue';
+										filename = 'zhushuai_blue';
 										checked = true;
 									}
 									break;
 								case '兵':
 								case '卒':
-									fileName = this.player.side === false ? 'qianfeng_blue' : 'qianfeng';
+									filename = this.player.side === false ? 'qianfeng_blue' : 'qianfeng';
 									checked = true;
 									break;
 								case '师':
-									fileName = 'junshi';
+									filename = 'junshi';
 									break;
 								case '盟':
-									fileName = 'mengjun';
+									filename = 'mengjun';
 									break;
 								case '神':
-									fileName = 'boss';
+									filename = 'boss';
 									break;
 								case '从':
-									fileName = 'suicong';
+									filename = 'suicong';
 									break;
 								default:
 									this.innerText = value;
-									this.style.opacity = 1;
+									this.style.visibility = '';
 									this.parentNode.style.backgroundImage = '';
 									return;
 							}
 							
 							if (!checked && this.parentNode.dataset.color) {
 								if (this.parentNode.dataset.color[0] == 'b') {
-									fileName += '_blue';
+									filename += '_blue';
 									this.player.classList.add('opposite-camp');
 								}
 							}
 							
 							this.innerText = value;
 							if (decadeUI.config.campIdentityImageMode) {
-								this.style.opacity = 0;
+								this.style.visibility = 'hidden';
 								var image = new Image();
 								image.node = this;
-								image.onerror = function() { this.node.style.opacity = 1; };
+								image.onerror = function() { this.node.style.visibility = ''; };
 								
-								image.src = extensionPath + 'image/decoration/identity_' + fileName + '.png';
+								image.src = extensionPath + 'image/decoration/identity_' + filename + '.png';
 								this.parentNode.style.backgroundImage = 'url("' + image.src + '")';
 							} else {
-								this.style.opacity = 1;
+								this.style.visibility = '';
 							}
 						}
 					}
@@ -3268,7 +4469,7 @@ content:function(config, pack){
 			    lib.config.glow_phase = '';
 			    initCssstylesFunction.call(this);
 			    lib.config.glow_phase = temp;
-				ui.css.styles.sheet.insertRule('.avatar-name, .avatar-name-default { font-family: "' + (lib.config.name_font || 'xinkai') + '", "xinwei" }', 0);
+				ui.css.styles.sheet.insertRule('.avatar-name, .avatar-name-default { font-family: "' + (lib.config.name_font || 'fzhtk') + '", "fzhtk" }', 0);
 			};
 
 			lib.init.layout = function(layout, nosave){
@@ -4076,159 +5277,6 @@ content:function(config, pack){
 				game.updateRoundNumber()
 			};
 			
-			lib.element.player.init = function(character, character2, skill){
-				this.doubleAvatar = (character2 && lib.character[character2]) != undefined;
-				
-				var CUR_DYNAMIC = decadeUI.CUR_DYNAMIC;
-				var MAX_DYNAMIC = decadeUI.MAX_DYNAMIC;
-				if (CUR_DYNAMIC == undefined) {
-					CUR_DYNAMIC = 0;
-					decadeUI.CUR_DYNAMIC = CUR_DYNAMIC;
-				}
-				
-				if (MAX_DYNAMIC == undefined) {
-					MAX_DYNAMIC = decadeUI.isMobile() ? 2 : 10;
-					if (window.OffscreenCanvas)
-						MAX_DYNAMIC += 8;
-					decadeUI.MAX_DYNAMIC = MAX_DYNAMIC;
-				}
-				
-				if (this.dynamic) 
-					this.stopDynamic();
-				if ((!this.dynamic && CUR_DYNAMIC == MAX_DYNAMIC) || duicfg.dynamicSkin == false) 
-					return base.lib.element.player.init.apply(this, arguments);
-				
-				var skins;
-				var dskins = decadeUI.dynamicSkin;
-				var avatars = this.doubleAvatar ? [character, character2] : [character];
-				var increased;
-				
-				for (var i = 0; i < avatars.length; i++) {
-					skins = dskins[avatars[i]];
-					if (skins == undefined)
-						continue;
-					
-					var keys = Object.keys(skins);
-					if (keys.length == 0) {
-						console.error('player.init: ' + avatars[i] + ' 没有设置动皮参数');
-						continue;
-					}
-					
-					var skin = skins[Object.keys(skins)[0]];
-					this.playDynamic({
-						name: skin.name,	 //	string 骨骼文件名，一般是assets/dynamic 下的动皮文件，也可以使用.. 来寻找其他文件目录
-						action: skin.action, // string 播放动作 不填为默认
-						loop: true, 		 // boolean 是否循环播放
-						loopCount: -1,		 // number 循环次数，只有loop为true时生效
-						speed: skin.speed ? skin.speed : 1,			 // number 播放速度
-						filpX: undefined,	 // boolean 水平镜像
-						filpY: undefined,	 // boolean 垂直翻转
-						opacity: undefined,	 // 0~1		不透明度
-						x: skin.x,			// 相对于父节点坐标x，不填为居中
-											// (1) x: 10, 相当于 left: 10px；
-											// (2) x: [10, 0.5], 相当于 left: calc(50% + 10px)；
-						y: skin.y,			// 相对于父节点坐标y，不填为居中
-											// (1) y: 10，相当于 top: 10px；
-											// (2) y: [10, 0.5]，相当于 top: calc(50% + 10px)；
-						scale: skin.scale,	// 缩放
-						angle: skin.angle,	// 角度
-					}, i == 1);
-					
-					
-					this.$dynamicWrap.style.backgroundImage = 'url("' + extensionPath + 'assets/dynamic/' + skin.background + '")';
-					if (!increased) {
-						increased = true;
-						decadeUI.CUR_DYNAMIC++;
-					}
-				}
-				
-				return base.lib.element.player.init.apply(this, arguments);
-			};
-			
-			lib.element.player.uninit = function(){
-			    this.stopDynamic();
-				this.doubleAvatar = false;
-				this.node.campWrap.dataset.camp = null;
-			    this.node.campWrap.node.campName.innerHTML = '';
-			    this.node.campWrap.node.campName.style.backgroundImage = '';
-			    this.node.name2.innerHTML = '';
-				
-				for (var i = 1; i < 6; i++) if (this.isDisabled(i)) this.$enableEquip('equip' + i);
-				
-				if (this.storage._disableJudge) {
-					game.broadcastAll(function(player) {
-						player.storage._disableJudge = false;
-						for (var i = 0; i < player.node.judges.childNodes.length; i++) {
-							if (player.node.judges.childNodes[i].name == 'disable_judge') {
-								player.node.judges.removeChild(player.node.judges.childNodes[i]);
-								break;
-							}
-						}
-					}, this);
-				}
-				this.node.avatar.hide();
-				this.node.count.hide();
-				if (this.node.wuxing) {
-					this.node.wuxing.hide();
-				}
-				if (this.node.name_seat) {
-					this.node.name_seat.remove();
-					this.node.name_seat = undefined;
-				}
-				
-				if (this.storage.nohp) this.node.hp.show();
-				this.classList.remove('unseen');
-				this.classList.remove('unseen2');
-				this.name = undefined;
-				this.name1 = undefined;
-				this.sex = undefined;
-				this.group = undefined;
-				this.hp = undefined;
-				this.maxHp = undefined;
-				this.hujia = undefined;
-				
-				this.clearSkills(true);
-				this.node.identity.style.backgroundColor = '';
-				this.node.intro.innerHTML = '';
-				this.node.name.innerHTML = '';
-				this.node.hp.innerHTML = '';
-				this.node.count.innerHTML = '0';
-				if (this.name2) {
-					this.singleHp = undefined;
-					this.node.avatar2.hide();
-					this.node.name2.innerHTML = '';
-					this.classList.remove('fullskin2');
-					this.name2 = undefined;
-				}
-				
-				for (var mark in this.marks) this.marks[mark].remove();
-				ui.updatem(this);
-
-				this.skipList = [];
-				this.skills = this.skills.contains('cangji_yozuru') ? ['cangji_yozuru'] : [];
-				this.initedSkills = [];
-				this.additionalSkills = {};
-				this.disabledSkills = {};
-				this.hiddenSkills = [];
-				this.awakenedSkills = [];
-				this.forbiddenSkills = {};
-				this.phaseNumber = 0;
-				this.stat = [{
-					card: {},
-					skill: {}
-				}];
-				this.tempSkills = {};
-				this.storage = {};
-				this.marks = {};
-				this.ai = {
-					friend: [],
-					enemy: [],
-					neutral: []
-				};
-
-				return this;
-			};
-			
 			lib.element.player.update = function(count, hp, hpMax, hujia){
 				if (!_status.video) {
 					if (this.hp >= this.maxHp) this.hp = this.maxHp;
@@ -4980,18 +6028,21 @@ content:function(config, pack){
 			lib.element.card.copy = function(){
 				var clone = cardCopyFunction.apply(this, arguments);
 				clone.nature = this.nature;
-				var res = decadeUI.resources.cards[clone.name];
-				if (res && !res.loaded && clone.classList.contains('decade-card')) {
-					if (res.loaded !== false) {
-						var error = res.image.onerror;
-						res.image.onerror = function(){
-							error.apply(this, arguments);
-							clone.style.background = res.rawUrl;
+				
+				var res = dui.statics.cards;
+				var asset = res[clone.name];
+				if (!res.READ_OK)
+					return clone;
+				
+				if (asset && !asset.loaded && clone.classList.contains('decade-card')) {
+					if (asset.loaded == undefined) {
+						var image = asset.image;
+						image.addEventListener('error', function(){
+							clone.style.background = asset.rawUrl;
 							clone.classList.remove('decade-card');
-						};
-						
+						});
 					} else {
-						clone.style.background = res.rawUrl;
+						clone.style.background = asset.rawUrl;
 						clone.classList.remove('decade-card');
 					} 
 				}
@@ -5671,16 +6722,6 @@ content:function(config, pack){
 			
 			return ResizeSensor;
 		})(),
-		resources:{
-			cards:{
-				卡牌名称:{
-					name: '拼音名',
-					chinese: '中文名',
-					image: new Image(),	// 图片
-					loaded: false, 		// 是否已加载资源
-				},
-			},
-		},
 		sheet:{
 			init:function(){
 				if (!this.sheetList){
@@ -6161,11 +7202,13 @@ content:function(config, pack){
 		    return (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|OperaMini/i.test(navigator.userAgent));
 		},
 		delay:function(milliseconds){
-		    if (typeof milliseconds != 'number') throw 'milliseconds is not number';
+		   if (typeof milliseconds != 'number') throw 'milliseconds is not number';
 		    if(_status.paused) return;
 			game.pause();
 			_status.timeout = setTimeout(game.resume, milliseconds);
 		},
+		
+		
 		getRandom:function(min, max) {
 			if (min == null) {
 				min = -2147483648;
@@ -6525,7 +7568,7 @@ content:function(config, pack){
 				
 				return dialog;
 			},
-		
+			
 		},
 		
 		get:{
@@ -6689,6 +7732,58 @@ content:function(config, pack){
 			}
 		},
 		
+		statics:{
+			cards: (function(){
+				var cards = {};
+				var readFiles = function (files, entry) {
+					var index, cardname, filename;
+					var cards = dui.statics.cards;
+					var format = duicfg.cardPrettify;
+					var prefix = decadeUIPath + 'image/card/';
+					cards.READ_OK = true;
+					if (format === 'off')
+						return;
+					
+					format = '.' + format.toLowerCase();
+					for (var i = 0; i < files.length; i++) {
+						filename = entry ? files[i].name : files[i];
+						index = filename.lastIndexOf(format);
+						if (index == -1)
+							continue;
+						
+						cardname = filename.substring(0, index);
+						cards[cardname] = {
+							url: prefix + filename,
+							name: cardname,
+							loaded: true,
+						};
+					}
+				};
+				
+				if (window.fs) {
+					console.time('resolve')
+					fs.readdir(__dirname + '/' + decadeUIPath + 'image/card/', function(err, files){
+						if (err)
+							return;
+						
+						console.timeEnd('resolve')
+						readFiles(files);
+					});
+				} else if (window.resolveLocalFileSystemURL) {
+					console.time('resolve')
+					resolveLocalFileSystemURL(decadeUIPath + 'image/card/', function(entry) {
+						var reader = entry.createReader();
+						reader.readEntries(function(entries){
+							readFiles(entries, true);
+						});
+					});
+				}
+				return cards;
+			})(),
+			handTips: [],
+			
+		},
+		
 		dataset:{
 			animSizeUpdated: false,
 			handDataUpdated: false,
@@ -6699,6 +7794,101 @@ content:function(config, pack){
 				updated: false,
 			},
 		},
+	};
+	
+	
+	dui.showHandTip = function (text) {
+		var tip;
+		var tips = this.statics.handTips;
+		for (var i = 0; i < tips.length; i++) {
+			if (tip == undefined && tips[i].closed) {
+				tip = tips[i];
+				tip.closed = false;
+			} else {
+				tips[i].hide();
+			}
+		}
+		
+		if (tip == undefined) {
+			tip = dui.element.create('hand-tip', ui.arena);
+			tips.unshift(tip);
+			tip.clear = function () {
+				var nodes = this.childNodes;
+				for (var i = 0; i < nodes.length; i++)
+					nodes[i].textContent = '';
+				
+				this.dataset.text = '';
+			};
+			tip.setText = function (text, type) {
+				this.clear();
+				this.appendText(text, type);
+			};
+			tip.setInfomation = function (text) {
+				if (this.$info == null)
+					this.$info = dui.element.create('hand-tip-info', ui.arena);
+				
+				this.$info.innerHTML = text;
+			};
+			tip.appendText = function (text, type) {
+				if (text == undefined || text === '')
+					return;
+				if (type == undefined)
+					type = '';
+				
+				var nodes = this.childNodes;
+				for (var i = 0; i < nodes.length; i++) {
+					if (nodes[i].textContent == '') {
+						nodes[i].textContent = text;
+						nodes[i].dataset.type = type;
+						return nodes[i];
+					}
+				}
+				
+				var span = document.createElement('span');
+				span.textContent = text;
+				span.dataset.type = type;
+				return this.appendChild(span);
+			};
+			tip.strokeText = function () {
+				this.dataset.text = this.innerText;
+			};
+			tip.show = function () {
+				this.classList.remove('hidden');
+				if (this.$info && this.$info.innerHTML)
+					this.$info.show();
+			};
+			tip.hide = function () {
+				this.classList.add('hidden');
+				if (this.$info)
+					this.$info.hide();
+			};
+			tip.close = function () {
+				this.closed = true;
+				this.hide();
+				if (tip.$info)
+					tip.$info.innerHTML = '';
+				var tips = dui.statics.handTips;
+				for (var i = 0; i < tips.length; i++) {
+					if (tips[i].closed)
+						continue;
+					
+					tips[i].show();
+					return;
+				}
+			};
+			tip.isEmpty = function () {
+				var nodes = this.childNodes;
+				for (var i = 0; i < nodes.length; i++) {
+					if (nodes[i].textContent != '')
+						return false;
+				}
+				
+				return true;
+			};
+		}
+		tip.setText(text);
+		tip.show();
+		return tip;
 	};
 	
 	decadeUI.CacheBounds = (function(){
@@ -6980,7 +8170,7 @@ content:function(config, pack){
 		}
 	};
 	
-	window.duicfg   = config
+	
 	decadeUI.config = config;
 	duicfg.update = function(){
 	    var menu = lib.extensionMenu['extension_' + extensionName];
@@ -6993,7 +8183,6 @@ content:function(config, pack){
 		}
 	};
 	
-	window.dui = decadeUI;
 	decadeUI.init();
 	console.timeEnd(extensionName);
 },
@@ -7001,6 +8190,10 @@ precontent:function(){
 	var extensionName = '十周年UI';
 	var extension = lib.extensionMenu['extension_' + extensionName];
 	window.decadeUIPath = lib.assetURL + 'extension/' + extensionName + '/';
+	if (window.require) {
+		if (!window.fs)
+			window.fs = require('fs');
+	}
 	
 	if (lib.config['extension_' + extensionName + '_eruda']) {
 	    var script = document.createElement('script');
@@ -7035,12 +8228,15 @@ precontent:function(){
 	var thisObject = this;
 	window.decadeParts = {
 		init:function(){
-			this.css(decadeUIPath + 'layout.css');
-			this.css(decadeUIPath + 'decadeLayout.css');
-			this.css(decadeUIPath + 'player.css');
+			if (ui.css.fontsheet)
+				ui.css.fontsheet.remove();
+			
+			this.css(decadeUIPath + 'font.css?v=' + thisObject.package.version);
+			this.css(decadeUIPath + 'layout.css?v=' + thisObject.package.version);
+			this.css(decadeUIPath + 'decadeLayout.css?v=' + thisObject.package.version);
+			this.css(decadeUIPath + 'player.css?v=' + thisObject.package.version);
 			
 			var filePath, ok;
-			// var fonts = ['shousha', 'xingkai', 'xinwei'];
 			var scripts = ['spine', 'component', 'skill', 'content', 'effect', 'animation', 'dynamicSkin'];
 			
 			var onload = function(){
@@ -7066,18 +8262,6 @@ precontent:function(){
 					if (!ok) console.error('script error');
 				}
 			}
-			
-			// var fontPreload = document.body.appendChild(document.createElement('div'));
-			// var fontHtml = '';
-			// for (var i = 0; i < fonts.length; i++) {
-				// fontHtml += '<font face="' + fonts[i] + '"> </font>'
-			// }
-			
-			// fontPreload.innerHTML = fontHtml;
-			// setTimeout(function(){
-				// fontPreload.remove();
-				// fontPreload = null;
-			// }, 100);
 			return this;
 		},
 		css:function(filePath){
@@ -7217,6 +8401,7 @@ config:{
 			skin_zhenji_才颜双绝: 				'甄　姬-才颜双绝',
 			skin_zhenji_洛神御水: 				'甄　姬-洛神御水',
 			skin_zhugeguo_兰荷艾莲: 			'诸葛果-兰荷艾莲',
+			skin_zhugeguo_仙池起舞: 			'诸葛果-仙池起舞',
 			skin_zhugeguo_英装素果: 			'诸葛果-英装素果',
 			skin_zhugeliang_空城退敌: 			'诸葛亮-空城退敌',
 			skin_zhangxingcai_凯旋星花: 		'张星彩-凯旋星花',
@@ -7244,39 +8429,25 @@ config:{
         init: true,
 		update:function(){
 			if (window.decadeUI) {
-				ui.arena.dataset.dynamicSkinOutcrop = lib.config['extension_十周年UI_dynamicSkinOutcrop'] ? 'on' : 'off';
+				var enable = lib.config['extension_十周年UI_dynamicSkinOutcrop'];
+				ui.arena.dataset.dynamicSkinOutcrop = enable ? 'on' : 'off';
 				var players = game.players;
 				if (!players) return;
 				for (var i = 0; i < players.length; i++) {
 					if (players[i].dynamic) {
+						players[i].dynamic.outcropMask = enable;
 						players[i].dynamic.update();
 					}
 				}
 			}
 		}
 	},
-	dynamicAdaptiveHD:{
-		name: '动皮高清自适应',
-		init: true,
-		update:function(){
-			if (!window.decadeUI) return;
-			var item = lib.config['extension_十周年UI_dynamicAdaptiveHD'];
-			decadeUI.config.dynamicAdaptiveHD = item;
-			var players = game.players;
-			if (players) {
-				for (var i = 0; i < players.length; i++) {
-					if (players[i].dynamic) {
-						players[i].dynamic.dprAdaptive = item;
-						players[i].dynamic.update();
-					}
-				}
-			}
-			
-			decadeUI.backgroundAnimation.dprAdaptive = item;
-		},
-	},
+	showJieMark:{
+        name: '界标记显示',
+        init: true,
+    },
     cardAlternateNameVisible:{
-        name: '卡名辅助显示',
+        name: '牌名辅助显示',
         init: false,
 		update:function(){
 			if (window.decadeUI) ui.window.dataset.cardAlternateNameVisible = lib.config['extension_十周年UI_cardAlternateNameVisible'] ? 'on' : 'off';
@@ -7392,24 +8563,21 @@ package:{
     intro:(function(){
 		var log = [
 			'有bug先检查其他扩展，不行再关闭UI重试，最后再联系作者。',
-			'当前版本：1.9.110.9.3.5：',
-			'更新日期：2021-11-14',
-			'- 新增动态背景[大　乔-衣垂绿川]、[小　乔-采莲江南]、[蜀香香-花曳心牵];',
-			'- 新增动态背景小杀的彩蛋；',
-			'- 新增双武将动态皮肤支持；',
-			'- 优化动画相关的布局逻辑;',
-			'- 优化动皮的显示过度动画；',
-			'- 优化代码，提升加载速度；',
-			'- 优化手机端窗口过小问题；',
-			'- 修复手机端按钮大小问题；',
-			'- 修复受伤时动画与体力条未同步的问题；',
-			'- 修复替换武将后动皮未正确显示的问题；',
-			'- 由于动态皮肤过多会导致特效丢失，因此作出以下数量限制；',
-			'  chrome 69 及以上的内核版本，手机端限制在10个，PC端限制在18个；',
-			'  chrome 69 　以下的内核版本，手机端限制在 2个，PC端限制在10个；',
-			'  在控制台输入代码：navigator.appVersion，会返回你的chrome版本；',
-			'- windows端闪屏的请使用诗笺的64位版(chrome 91~)，或者原版的win由里版(chrome 51)，或者自行',
-			'  打包electron 4.0.0(chrome 69) ~ 10.4.7(chrome 85);',
+			'当前版本：1.1.0.211130',
+			'更新日期：2021-11-30',
+			'- 新增动皮[诸葛果仙池起舞]及其背景；',
+			'- 新增界武将标记显示及其对应的开关；',
+			'- 优化字体加载，配置font.css后秒开；',
+			'- 优化卡牌素材加载时机，提升流畅度；',
+			'- 优化出牌阶段与技能使用时文本提示；',
+			'- 优化武将的发光阴影时机并改为动图；',
+			'- 优化露头动皮其他特效部件显示范围；',
+			'  优化露头动皮有：大乔-衣垂绿川、小乔-采莲江南、何太后-蛇蝎为心、徐氏-为夫弑敌；',
+			'- 调整高清动皮自适应功能默认为开启；',
+			'- 修复在低内核版本下动皮的模糊问题；',
+			'- 修复挑战模式下BOSS图片消失的问题；',
+			'- 修复对决模式下选将图片消失的问题；',
+			'- 关于动皮数量限制，手机端请把chrome 内核更新到90及以上；',
 		];
 		
 		return '<p style="color:rgb(210,210,000); font-size:12px; line-height:14px; text-shadow: 0 0 2px black;">' + log.join('<br>') + '</p>';
@@ -7417,7 +8585,7 @@ package:{
     author:"短歌 QQ464598631",
     diskURL:"",
     forumURL:"",
-    version:"1.9.110.9.3.5",
+    version:"1.1.0.211130",
 },
 files:{
     "character":[],
@@ -7701,4 +8869,18 @@ editable: false
   在控制台输入代码：navigator.appVersion，会返回你的chrome版本；
 - windows端闪屏的请使用诗笺的64位版(chrome 91~)，或者原版的win由里版(chrome 51)，或者自行
   打包electron 10.4.7(chrome 85) ~ 4.0.0(chrome 69);
+1.1.0.211130
+- 新增动皮[诸葛果仙池起舞]及其背景；
+- 新增界武将标记显示及其对应的开关；
+- 优化字体加载，配置font.css后秒开；
+- 优化卡牌素材加载时机，提升流畅度；
+- 优化出牌阶段与技能使用时文本提示；
+- 优化武将的发光阴影时机并改为动图；
+- 优化露头动皮其他特效部件显示范围；
+  优化露头动皮有：大乔-衣垂绿川、小乔-采莲江南、何太后-蛇蝎为心、徐氏-为夫弑敌；
+- 调整高清动皮自适应功能默认为开启；
+- 修复在低内核版本下动皮的模糊问题；
+- 修复挑战模式下BOSS图片消失的问题；
+- 修复对决模式下选将图片消失的问题；
+- 关于动皮数量限制，手机端请把chrome 内核更新到90及以上；
 */

@@ -77,8 +77,16 @@ onmessage = function (e) {
 
 function update (dynamic, data) {
 	dynamic.resized = false;
-	if (data.dpr != undefined) dynamic.dpr = data.dpr;
-	if (data.dprAdaptive != undefined) dynamic.dprAdaptive = data.dprAdaptive;
-	if (data.width != undefined) dynamic.width = data.width;
-	if (data.height != undefined) dynamic.height = data.height;
+	if (data.dpr != null)
+		dynamic.dpr = data.dpr;
+	if (data.dprAdaptive != null)
+		dynamic.dprAdaptive = data.dprAdaptive;
+	if (data.outcropMask != null)
+		dynamic.outcropMask = data.outcropMask;
+	if (data.useMipMaps != null)
+		dynamic.useMipMaps = data.useMipMaps;
+	if (data.width != null)
+		dynamic.width = data.width;
+	if (data.height != null)
+		dynamic.height = data.height;
 }

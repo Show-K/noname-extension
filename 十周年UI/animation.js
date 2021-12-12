@@ -100,7 +100,9 @@ var duilib;
 			this.scale = initParam.scale;
 			this.opacity = initParam.opacity;
 			this.clip = initParam.clip;
-			this.hideSkelClip = initParam.hideSkelClip;
+			this.hideSlots = initParam.hideSlots;
+			this.clipSlots = initParam.clipSlots;
+			this.disableMask = initParam.disableMask;
 			this.renderX = undefined;							// 内部属性，不可更改
 			this.renderY = undefined;							// 内部属性，不可更改
 			this.renderAngle = undefined;						// 内部属性，不可更改
@@ -295,6 +297,7 @@ var duilib;
 					height: calc(this.clip.height, e.canvas.height, dpr)
 				};
 			}
+			
 			if (this.onupdate) this.onupdate();
 		};
 		
@@ -399,7 +402,6 @@ var duilib;
 			
 			Object.defineProperties(this, {
 				dprAdaptive: {
-					configurable: true,
 					get:function(){
 						return this._dprAdaptive;
 					},
@@ -409,6 +411,16 @@ var duilib;
 						this.resized = false;
 					},
 				},
+				useMipMaps: {
+					get:function(){
+						if (!gl) return;
+						return this.gl.useMipMaps;
+					},
+					set:function(value){
+						if (!gl) return;
+						this.gl.useMipMaps = value;
+					},
+				}
 			});
 			
 			if (!this.offscreen) {
@@ -833,7 +845,7 @@ var duilib;
 			var sprite, state, skeleton;
 			var shader = this.spine.shader;
 			var batcher = this.spine.batcher;
-			var skeletonRenderer = this.spine.skeletonRenderer;
+			var renderer = this.spine.skeletonRenderer;
 			
 			gl.enable(gl.SCISSOR_TEST);
 			gl.scissor(0, 0, canvas.width, canvas.height);
@@ -844,12 +856,12 @@ var duilib;
 				shader.setUniformi(spine.webgl.Shader.SAMPLER, 0);
 			}
 			
-			var speed, clipping = false;
+			var speed;
 			for (var i = 0; i < nodes.length; i++) {
 				sprite = nodes[i];
 				if (sprite.renderClip != undefined) {
-					clipping = true;
-					gl.scissor(sprite.renderClip.x, sprite.renderClip.y, sprite.renderClip.width, sprite.renderClip.height);
+					gl.clipping = sprite.renderClip;
+					gl.scissor(gl.clipping.x, gl.clipping.y, gl.clipping.width, gl.clipping.height);
 				}
 				
 				skeleton = sprite.skeleton;
@@ -858,19 +870,30 @@ var duilib;
 				skeleton.flipX = sprite.flipX;
 				skeleton.flipY = sprite.flipY
 				skeleton.opacity = (sprite.renderOpacity == undefined ? 1 : sprite.renderOpacity);
+				state.hideSlots = sprite.hideSlots;
 				state.update(delta / 1000 * speed);
 				state.apply(skeleton);
 				skeleton.updateWorldTransform();
 				
 				shader.setUniform4x4f(spine.webgl.Shader.MVP_MATRIX, sprite.mvp.values);
 				batcher.begin(shader);
-				skeletonRenderer.premultipliedAlpha = sprite.premultipliedAlpha;
-				skeletonRenderer.hideSkelClip = sprite.hideSkelClip;
-				skeletonRenderer.draw(batcher, skeleton);
+				renderer.premultipliedAlpha = sprite.premultipliedAlpha;
+				renderer.outcropMask = this.outcropMask;
+				if (renderer.outcropMask) {
+					renderer.outcropX = sprite.renderX;
+					renderer.outcropY = sprite.renderY;
+					renderer.outcropScale = sprite.renderScale;
+					renderer.outcropAngle = sprite.renderAngle;
+					renderer.clipSlots = sprite.clipSlots;
+				}
+				
+				renderer.hideSlots = sprite.hideSlots;
+				renderer.disableMask = sprite.disableMask;
+				renderer.draw(batcher, skeleton);
 				batcher.end();
 				
-				if (clipping) {
-					clipping = false;
+				if (gl.clipping) {
+					gl.clipping = undefined;
 					gl.scissor(0, 0, canvas.width, canvas.height);
 				}
 			}
@@ -1003,12 +1026,17 @@ var duilib;
 					id: this.id,
 					dpr: this.dpr,
 					dprAdaptive: this.dprAdaptive,
+					outcropMask: this.outcropMask,
+					useMipMaps: this.useMipMaps,
 					width: this.width,
 					height: this.height,
 					sprite: sprite,
 				});
 			} else {
 				var dynamic = this.renderer;
+				dynamic.useMipMaps = this.useMipMaps;
+				dynamic.dprAdaptive = this.dprAdaptive;
+				dynamic.outcropMask = this.outcropMask;
 				var run = function () {
 					var t = dynamic.playSpine(sprite);
 					t.opacity = 0;
@@ -1054,6 +1082,9 @@ var duilib;
 			this.resized = true;
 			if (!this.offscreen) {
 				this.renderer.resized = false;
+				this.renderer.useMipMaps = this.useMipMaps;
+				this.renderer.dprAdaptive = this.dprAdaptive;
+				this.renderer.outcropMask = this.outcropMask;
 				return;
 			}
 			
@@ -1066,6 +1097,8 @@ var duilib;
 					id: this.id,
 					dpr: this.dpr,
 					dprAdaptive: this.dprAdaptive,
+					outcropMask: this.outcropMask,
+					useMipMaps: this.useMipMaps,
 					width: this.width,
 					height: this.height,
 				});
@@ -1311,6 +1344,7 @@ decadeParts.import(function(lib, game, ui, get, ai, _status){
 		var animation = new decadeUI.AnimationPlayer(decadeUIPath + 'assets/dynamic/', document.body, 'decadeUI-canvas-background');
 		decadeUI.bodySensor.addListener(function(){ animation.resized = false; }, true);
 		
+		animation.dprAdaptive = true;
 		animation.definedAssets  = {
 			skin_xiaosha: {
 				default: {
@@ -1339,7 +1373,7 @@ decadeParts.import(function(lib, game, ui, get, ai, _status){
 					x: [0, 0.5],
 					y: [-100, 0.5],
 					height: [0, 1.2],
-					hideSkelClip: true,
+					disableMask: true,
 				}
 			},
 			skin_caojie: {
@@ -1430,6 +1464,7 @@ decadeParts.import(function(lib, game, ui, get, ai, _status){
 					action: 'DaiJi',
 					y: [5, 0.33],
 					height: [0, 0.76],
+					hideSlots: 'jiubei',
 				},
 			},
 			skin_huaman: {
@@ -1665,6 +1700,13 @@ decadeParts.import(function(lib, game, ui, get, ai, _status){
 					x: [0, 0.7],
 					y: [75, 0.3],
 					height: [0, 0.8],
+				},
+				仙池起舞: {
+					name: 'skin_zhugeguo_XianChiQiWU',
+					action: 'DaiJi',
+					x: [0, 0.48],
+					y: [0, 0.35],
+					height: [0, 1.5],
 				},
 				英装素果: {
 					name: 'skin_zhugeguo_YingZhuangSuGuo',

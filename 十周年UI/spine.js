@@ -3957,10 +3957,17 @@ var spine;
 		SkeletonClipping.prototype.clipStart = function (slot, clip) {
 			if (this.clipAttachment != null)
 				return 0;
+			
+			this.clipSlot = slot;
 			this.clipAttachment = clip;
-			var n = clip.worldVerticesLength;
-			var vertices = spine.Utils.setArraySize(this.clippingPolygon, n);
-			clip.computeWorldVertices(slot, 0, n, vertices, 0, 2);
+			if (slot) {
+				var n = clip.worldVerticesLength;
+				var vertices = spine.Utils.setArraySize(this.clippingPolygon, n);
+				clip.computeWorldVertices(slot, 0, n, vertices, 0, 2);
+			} else {
+				this.clippingPolygon = clip.vertices.concat();
+			}
+			
 			var clippingPolygon = this.clippingPolygon;
 			SkeletonClipping.makeClockwise(clippingPolygon);
 			var clippingPolygons = this.clippingPolygons = this.triangulator.decompose(clippingPolygon, this.triangulator.triangulate(clippingPolygon));
@@ -3979,6 +3986,8 @@ var spine;
 		SkeletonClipping.prototype.clipEnd = function () {
 			if (this.clipAttachment == null)
 				return;
+			
+			this.clipSlot = null;
 			this.clipAttachment = null;
 			this.clippingPolygons = null;
 			this.clippedVertices.length = 0;
@@ -7272,8 +7281,7 @@ var spine;
 					worldVertices[w] = wx;
 					worldVertices[w + 1] = wy;
 				}
-			}
-			else {
+			} else {
 				var deform = deformArray;
 				for (var w = offset, b = skip * 3, f = skip << 1; w < count; w += stride) {
 					var wx = 0, wy = 0;
@@ -7759,13 +7767,17 @@ var spine;
 					this.texture = this.context.gl.createTexture();
 				}
 				this.bind();
+				useMipMaps = gl.isWebgl2 && gl.useMipMaps;
 				gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._image);
 				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, useMipMaps ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR);
 				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-				if (useMipMaps)
+				if (useMipMaps) {
+					gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_BASE_LEVEL, 0);
+					gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_LEVEL, 1);
 					gl.generateMipmap(gl.TEXTURE_2D);
+				}
 			};
 			GLTexture.prototype.restore = function () {
 				this.texture = null;
@@ -9957,6 +9969,12 @@ var spine;
 		var SkeletonRenderer = (function () {
 			function SkeletonRenderer(context, twoColorTint) {
 				if (twoColorTint === void 0) { twoColorTint = true; }
+				if (context instanceof webgl.ManagedWebGLRenderingContext) {
+					this.gl = context.gl;
+				} else {
+					this.gl = context;
+				}
+				
 				this.premultipliedAlpha = false;
 				this.vertexEffect = null;
 				this.tempColor = new spine.Color();
@@ -9974,9 +9992,62 @@ var spine;
 					this.vertexSize += 4;
 				this.vertices = spine.Utils.newFloatArray(this.vertexSize * 1024);
 			}
+			SkeletonRenderer.prototype.getSlotsMask = function () {
+				var scale = this.outcropScale;
+				var angle = this.outcropAngle;
+				var gl = this.gl;
+				
+				var ox = gl.canvas.width  / 2;
+				var oy = gl.canvas.height / 2;
+				var x = this.outcropX;
+				var y = this.outcropY;
+				if (x == null)
+					x = ox;
+				if (y == null)
+					y = oy;
+				
+				var offsetX = ox - x;
+				var offsetY = oy - y;
+				var t = offsetY + oy - (gl.canvas.height * 0.1);
+				var r = offsetX + ox;
+				var b = offsetY - oy;
+				var l = offsetX - ox;
+				
+				t /= scale;
+				r /= scale;
+				b /= scale;
+				l /= scale;
+				
+				slotsMask = this.slotsMask;
+				if (slotsMask == null) {
+					slotsMask = this.slotsMask = new spine.ClippingAttachment('outcrop');
+					slotsMask.vertices = new Array(8);
+					slotsMask.worldVerticesLength = slotsMask.vertices.length;
+				}
+				
+				var verts = slotsMask.vertices;
+				verts[0] = l; verts[1] = t;
+				verts[2] = l; verts[3] = b;
+				verts[4] = r; verts[5] = b;
+				verts[6] = r; verts[7] = t;
+				if (angle) {
+					angle = angle / 180 * Math.PI;
+					var cosA = Math.cos(angle);
+					var sinA = Math.sin(angle);
+					var dx, dy;
+					for (var i = 0; i < 8; i += 2) {
+						dx = verts[i];
+						dy = verts[i + 1];
+						verts[i] = dx * cosA + dy * sinA;
+						verts[i + 1] = dy * cosA - dx * sinA;
+					}
+				}
+				return slotsMask;
+			};
 			SkeletonRenderer.prototype.draw = function (batcher, skeleton, slotRangeStart, slotRangeEnd) {
 				if (slotRangeStart === void 0) { slotRangeStart = -1; }
 				if (slotRangeEnd === void 0) { slotRangeEnd = -1; }
+				var gl = this.gl;
 				var clipper = this.clipper;
 				var premultipliedAlpha = this.premultipliedAlpha;
 				var twoColorTint = this.twoColorTint;
@@ -9995,9 +10066,26 @@ var spine;
 				var inRange = false;
 				if (slotRangeStart == -1)
 					inRange = true;
+				var hideSlots = this.hideSlots;
+				if (hideSlots && !Array.isArray(hideSlots))
+					hideSlots = [hideSlots];
+				
+				var slotName;
+				var clipSlots;
+				var slotsMask;
+				if (this.outcropMask) {
+					clipSlots = this.clipSlots;
+					if (clipSlots) {
+						if (!Array.isArray(clipSlots))
+							clipSlots = [clipSlots];
+						
+						slotsMask = this.getSlotsMask();
+					}
+				}
+				
 				for (var i = 0, n = drawOrder.length; i < n; i++) {
-					var clippedVertexSize = clipper.isClipping() ? 2 : vertexSize;
 					var slot = drawOrder[i];
+					
 					if (slotRangeStart >= 0 && slotRangeStart == slot.data.index) {
 						inRange = true;
 					}
@@ -10008,8 +10096,28 @@ var spine;
 					if (slotRangeEnd >= 0 && slotRangeEnd == slot.data.index) {
 						inRange = false;
 					}
+					
 					var attachment = slot.getAttachment();
+					if (attachment && hideSlots) {
+						slotName = attachment.name;
+						if (slotName && hideSlots.indexOf(slotName) != -1) {
+							clipper.clipEndWithSlot(slot);
+							continue;
+						}
+					}
+					
+					if (attachment && clipSlots) {
+						slotName = attachment.name;
+						if (slotName && clipSlots.indexOf(slotName) != -1) {
+							if (clipper.clipAttachment != slotsMask)
+								clipper.clipStart(false, slotsMask);
+						} else if (clipper.clipAttachment == slotsMask) {
+							clipper.clipEnd();
+						}
+					}
+					
 					var texture = null;
+					var clippedVertexSize = clipper.isClipping() ? 2 : vertexSize;
 					if (attachment instanceof spine.RegionAttachment) {
 						var region = attachment;
 						renderable.vertices = this.vertices;
@@ -10020,8 +10128,7 @@ var spine;
 						uvs = region.uvs;
 						texture = region.region.renderObject.texture;
 						attachmentColor = region.color;
-					}
-					else if (attachment instanceof spine.MeshAttachment) {
+					} else if (attachment instanceof spine.MeshAttachment) {
 						var mesh = attachment;
 						renderable.vertices = this.vertices;
 						renderable.numVertices = (mesh.worldVerticesLength >> 1);
@@ -10034,14 +10141,15 @@ var spine;
 						texture = mesh.region.renderObject.texture;
 						uvs = mesh.uvs;
 						attachmentColor = mesh.color;
-					}
-					else if (attachment instanceof spine.ClippingAttachment) {
+					} else if (attachment instanceof spine.ClippingAttachment) {
 						var clip = (attachment);
-						if (!this.hideSkelClip) clipper.clipStart(slot, clip);
-						continue;
+						if (!this.disableMask && !this.outcropMask) {
+							clipper.clipStart(slot, clip);
+						}
+					} else {
+						clipper.clipEndWithSlot(slot);
 					}
-					else
-						continue;
+					
 					if (texture != null) {
 						var slotColor = slot.color;
 						var finalColor = this.tempColor;
@@ -10062,8 +10170,7 @@ var spine;
 								darkColor.r = slot.darkColor.r * finalColor.a;
 								darkColor.g = slot.darkColor.g * finalColor.a;
 								darkColor.b = slot.darkColor.b * finalColor.a;
-							}
-							else {
+							} else {
 								darkColor.setFromColor(slot.darkColor);
 							}
 							darkColor.a = premultipliedAlpha ? 1.0 : 0.0;
@@ -10077,132 +10184,38 @@ var spine;
 							clipper.clipTriangles(renderable.vertices, renderable.numFloats, triangles, triangles.length, uvs, finalColor, darkColor, twoColorTint);
 							var clippedVertices = new Float32Array(clipper.clippedVertices);
 							var clippedTriangles = clipper.clippedTriangles;
-							if (this.vertexEffect != null) {
-								var vertexEffect = this.vertexEffect;
-								var verts = clippedVertices;
-								if (!twoColorTint) {
-									for (var v = 0, n_3 = clippedVertices.length; v < n_3; v += vertexSize) {
-										tempPos.x = verts[v];
-										tempPos.y = verts[v + 1];
-										tempLight.set(verts[v + 2], verts[v + 3], verts[v + 4], verts[v + 5]);
-										tempUv.x = verts[v + 6];
-										tempUv.y = verts[v + 7];
-										tempDark.set(0, 0, 0, 0);
-										vertexEffect.transform(tempPos, tempUv, tempLight, tempDark);
-										verts[v] = tempPos.x;
-										verts[v + 1] = tempPos.y;
-										verts[v + 2] = tempLight.r;
-										verts[v + 3] = tempLight.g;
-										verts[v + 4] = tempLight.b;
-										verts[v + 5] = tempLight.a;
-										verts[v + 6] = tempUv.x;
-										verts[v + 7] = tempUv.y;
-									}
-								}
-								else {
-									for (var v = 0, n_4 = clippedVertices.length; v < n_4; v += vertexSize) {
-										tempPos.x = verts[v];
-										tempPos.y = verts[v + 1];
-										tempLight.set(verts[v + 2], verts[v + 3], verts[v + 4], verts[v + 5]);
-										tempUv.x = verts[v + 6];
-										tempUv.y = verts[v + 7];
-										tempDark.set(verts[v + 8], verts[v + 9], verts[v + 10], verts[v + 11]);
-										vertexEffect.transform(tempPos, tempUv, tempLight, tempDark);
-										verts[v] = tempPos.x;
-										verts[v + 1] = tempPos.y;
-										verts[v + 2] = tempLight.r;
-										verts[v + 3] = tempLight.g;
-										verts[v + 4] = tempLight.b;
-										verts[v + 5] = tempLight.a;
-										verts[v + 6] = tempUv.x;
-										verts[v + 7] = tempUv.y;
-										verts[v + 8] = tempDark.r;
-										verts[v + 9] = tempDark.g;
-										verts[v + 10] = tempDark.b;
-										verts[v + 11] = tempDark.a;
-									}
-								}
-							}
 							batcher.draw(texture, clippedVertices, clippedTriangles);
-						}
-						else {
+						} else {
 							var verts = renderable.vertices;
-							if (this.vertexEffect != null) {
-								var vertexEffect = this.vertexEffect;
-								if (!twoColorTint) {
-									for (var v = 0, u = 0, n_5 = renderable.numFloats; v < n_5; v += vertexSize, u += 2) {
-										tempPos.x = verts[v];
-										tempPos.y = verts[v + 1];
-										tempUv.x = uvs[u];
-										tempUv.y = uvs[u + 1];
-										tempLight.setFromColor(finalColor);
-										tempDark.set(0, 0, 0, 0);
-										vertexEffect.transform(tempPos, tempUv, tempLight, tempDark);
-										verts[v] = tempPos.x;
-										verts[v + 1] = tempPos.y;
-										verts[v + 2] = tempLight.r;
-										verts[v + 3] = tempLight.g;
-										verts[v + 4] = tempLight.b;
-										verts[v + 5] = tempLight.a;
-										verts[v + 6] = tempUv.x;
-										verts[v + 7] = tempUv.y;
-									}
+							if (!twoColorTint) {
+								for (var v = 2, u = 0, n_7 = renderable.numFloats; v < n_7; v += vertexSize, u += 2) {
+									verts[v] = finalColor.r;
+									verts[v + 1] = finalColor.g;
+									verts[v + 2] = finalColor.b;
+									verts[v + 3] = finalColor.a;
+									verts[v + 4] = uvs[u];
+									verts[v + 5] = uvs[u + 1];
 								}
-								else {
-									for (var v = 0, u = 0, n_6 = renderable.numFloats; v < n_6; v += vertexSize, u += 2) {
-										tempPos.x = verts[v];
-										tempPos.y = verts[v + 1];
-										tempUv.x = uvs[u];
-										tempUv.y = uvs[u + 1];
-										tempLight.setFromColor(finalColor);
-										tempDark.setFromColor(darkColor);
-										vertexEffect.transform(tempPos, tempUv, tempLight, tempDark);
-										verts[v] = tempPos.x;
-										verts[v + 1] = tempPos.y;
-										verts[v + 2] = tempLight.r;
-										verts[v + 3] = tempLight.g;
-										verts[v + 4] = tempLight.b;
-										verts[v + 5] = tempLight.a;
-										verts[v + 6] = tempUv.x;
-										verts[v + 7] = tempUv.y;
-										verts[v + 8] = tempDark.r;
-										verts[v + 9] = tempDark.g;
-										verts[v + 10] = tempDark.b;
-										verts[v + 11] = tempDark.a;
-									}
-								}
-							}
-							else {
-								if (!twoColorTint) {
-									for (var v = 2, u = 0, n_7 = renderable.numFloats; v < n_7; v += vertexSize, u += 2) {
-										verts[v] = finalColor.r;
-										verts[v + 1] = finalColor.g;
-										verts[v + 2] = finalColor.b;
-										verts[v + 3] = finalColor.a;
-										verts[v + 4] = uvs[u];
-										verts[v + 5] = uvs[u + 1];
-									}
-								}
-								else {
-									for (var v = 2, u = 0, n_8 = renderable.numFloats; v < n_8; v += vertexSize, u += 2) {
-										verts[v] = finalColor.r;
-										verts[v + 1] = finalColor.g;
-										verts[v + 2] = finalColor.b;
-										verts[v + 3] = finalColor.a;
-										verts[v + 4] = uvs[u];
-										verts[v + 5] = uvs[u + 1];
-										verts[v + 6] = darkColor.r;
-										verts[v + 7] = darkColor.g;
-										verts[v + 8] = darkColor.b;
-										verts[v + 9] = darkColor.a;
-									}
+							} else {
+								for (var v = 2, u = 0, n_8 = renderable.numFloats; v < n_8; v += vertexSize, u += 2) {
+									verts[v] = finalColor.r;
+									verts[v + 1] = finalColor.g;
+									verts[v + 2] = finalColor.b;
+									verts[v + 3] = finalColor.a;
+									verts[v + 4] = uvs[u];
+									verts[v + 5] = uvs[u + 1];
+									verts[v + 6] = darkColor.r;
+									verts[v + 7] = darkColor.g;
+									verts[v + 8] = darkColor.b;
+									verts[v + 9] = darkColor.a;
 								}
 							}
 							var view = renderable.vertices.subarray(0, renderable.numFloats);
 							batcher.draw(texture, view, triangles);
 						}
+						
+						clipper.clipEndWithSlot(slot);
 					}
-					clipper.clipEndWithSlot(slot);
 				}
 				clipper.clipEnd();
 			};

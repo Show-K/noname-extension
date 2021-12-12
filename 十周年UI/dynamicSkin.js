@@ -16,6 +16,8 @@ decadeParts.import(function(lib, game, ui, get, ai, _status){
 				scale: 0.5,		//	可删掉	缩放大小，不填默认为1；
 				angle: 0,		//	可删掉	旋转角度，不填默认为0；
 				speed: 1,		//	可删掉	播放速度，不填默认为1；
+				hideSlots: ['隐藏的部件'],	// 隐藏不需要的部件，想知道具体部件名称请使用SpineAltasSplit工具查看
+				clipSlots: ['裁剪的部件'],	// 剪掉超出头的部件，仅针对露头动皮，其他勿用
 				background: "xxx.jpg",	//	可删掉	背景图片，注意后面要写后缀名，如.jpg .png等 
 			}
 		},
@@ -30,6 +32,8 @@ decadeParts.import(function(lib, game, ui, get, ai, _status){
 			y: [0, 0.5],
 			scale: 0.5,
 			angle: 0,
+			hideSlots: ['隐藏的部件'],	// 隐藏不需要的部件，想知道具体部件名称请使用SpineAltasSplit工具查看
+			clipSlots: ['裁剪的部件'],	// 剪掉超出头的部件，仅针对露头动皮，其他勿用
 		});
 		// 这里可以改成  }, true);  设置右将动皮
 	*/
@@ -63,6 +67,16 @@ decadeParts.import(function(lib, game, ui, get, ai, _status){
 			},
 		},
 		daqiao:{
+			衣垂绿川:{
+				name: 'skin_daqiao_YiChuiLvChuan',
+				action: 'DaiJi',
+				x: [60, 0.5],
+				y: [0, 0.2],
+				scale: 0.5,
+				clipSlots: ['san'],
+				hideSlots: ['qjhua1', 'qjhua2', 'qjhua3', 'qjhua4', 'qjhua5', 'guangxian', 'yun1', 'yun3', 'effect/guang2_00', 'effect/yan'],
+				background: 'skin_daqiao_QingXiaoQingLi_bg.png',
+			},
 			清萧清丽:{
 				name: 'skin_daqiao_QingXiaoQingLi',
 				x: [16, 0.5],
@@ -116,6 +130,7 @@ decadeParts.import(function(lib, game, ui, get, ai, _status){
 				y: [10, 0.1],
 				scale: 0.46,
 				angle: 27,
+				clipSlots: ['wangzuo', 'bu2', 'bu3'],
 				background: 'skin_hetaihou_SheXieWeiXin_bg.png',
 			},
 		},
@@ -145,6 +160,8 @@ decadeParts.import(function(lib, game, ui, get, ai, _status){
 				y: [0, 0.3],
 				scale: 0.52,
 				background: 'skin_machao_XiLiangXiongShi_bg.png',
+				clipSlots: ['tx/fw_19'],
+				hideSlots: ['tx/glow_00']
 			},
 		},
 		mayunlu:{
@@ -247,6 +264,18 @@ decadeParts.import(function(lib, game, ui, get, ai, _status){
 			},
 		},
 		re_xiaoqiao:{
+			采莲江南:{
+				name: 'skin_xiaoqiao_CaiLianJiangNan',
+				action: 'DaiJi',
+				x: [105, 0.5],
+				y: [15, 0.1],
+				scale: 0.48,
+				background: 'skin_xiaoqiao_HuaHaoYueYuan_bg.png',
+				clipSlots: ['san', 'guang3_30'],
+				hideSlots: ['guang3_30', 'bghua1', 'bgshitou1', 'bgshitou2', 'hehua1', 
+					'hehua2', 'hehua3', 'hehua4', 'shuchong1', 'shuchong2', 'shugan',
+					'shui1', 'shui2', 'shuimian', 'shuiwen1', 'shuiwen2', 'shuiwen3', 'qjhehua', 'heye2'],
+			},
 			花好月圆:{
 				name: 'skin_xiaoqiao_HuaHaoYueYuan',
 				x: [-40, 0.5],
@@ -271,6 +300,7 @@ decadeParts.import(function(lib, game, ui, get, ai, _status){
 				y: [0, 0.3],
 				scale: 0.42,
 				background: 'skin_xushi_WeiFuShiDi_bg.png',
+				hideSlots: ['xushi_piaodai2', 'xushi_piaodai8'],
 			}
 		},
 		yangwan:{
@@ -319,6 +349,14 @@ decadeParts.import(function(lib, game, ui, get, ai, _status){
 			},
 		},
 		zhugeguo:{
+			仙池起舞:{
+				name: 'skin_zhugeguo_XianChiQiWU',
+				action: 'DaiJi',
+				x: [-70, 0.5],
+				y: [15, 0.2],
+				scale: 0.45,
+				background: 'skin_zhugeguo_LanHeAiLian_bg.png',
+			},
 			兰荷艾莲:{
 				name: 'skin_zhugeguo_LanHeAiLian',
 				x: [-30, 0.5],
