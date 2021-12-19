@@ -8442,10 +8442,12 @@ config:{
 			}
 		}
 	},
+	/*
 	showJieMark:{
         name: '界标记显示',
-        init: true,
+        init: false,
     },
+	*/
     cardAlternateNameVisible:{
         name: '牌名辅助显示',
         init: false,
@@ -8528,7 +8530,7 @@ config:{
 	},
 	playerMarkStyle:{
         name: '人物标记样式',
-        init: 'yellow',
+        init: 'decade',
         item:{
             red:'红色',
 			yellow:'黄色',
