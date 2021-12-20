@@ -11,17 +11,9 @@ extension["在线更新"]={
 
 extension["拖拽读取"]={
     author:"诗笺、Show-K（修改）",
-    intro:"windows电脑版专属扩展，把zip文件（离线包，扩展或素材压缩包）拖入到游戏内即可导入",
-    size:"123KB",
+    intro:"windows电脑版专属扩展，把zip或7z文件（离线包，扩展或素材压缩包，目前不支持导入7z扩展）拖入到游戏内即可导入",
+    size:"#SIZE",
     netdisk:"",
-    version:"1.76SST",
-    files:[
-        "catalogTemplate.txt",
-        "extension.css",
-        "extension.js",
-        "jszip.js",
-        "README.md",
-        "updateContent",
-        "version",
-	],
+    version:"1.77SST",
+    files:["#FILES"],
 };
