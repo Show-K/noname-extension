@@ -8331,7 +8331,7 @@ config:{
     },
     smoothMode: {
 		name: '流畅模式',
-		init: true,
+		init: false,
 	},
 	rightLayout:{
         name: '右手布局',
@@ -8351,7 +8351,7 @@ config:{
     },
 	dynamicBackground:{
 		name: '动态背景',
-		init: 'skin_xiaosha_default',
+		init: 'off',
 		item:{
 			off: '关闭',
 			skin_xiaosha_default: 				'小杀',
