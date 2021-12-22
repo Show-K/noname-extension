@@ -1,12 +1,15 @@
 extension["即时乱斗"]={
     author:"Show-K",
     intro:"实验：（伪）即时回合制玩法",
-    size:"8.05KB",
+    size:"962KB",
     netdisk:"",
-    version:"1.0",
+    version:"1.1",
     files:[
         "extension.js",
-	],
+        "pinyin_dict_notone.js",
+        "pinyin_dict_polyphone.js",
+        "pinyinUtil.js"
+	]
 };
 
 extension["在线更新"]={
@@ -16,8 +19,8 @@ extension["在线更新"]={
     netdisk:"",
     version:"1.22SST",
     files:[
-        "extension.js",
-	],
+        "extension.js"
+	]
 };
 
 extension["拖拽读取"]={
@@ -25,5 +28,5 @@ extension["拖拽读取"]={
     intro:"windows电脑版专属扩展，把zip或7z文件（离线包，扩展或素材压缩包，目前不支持导入7z扩展）拖入到游戏内即可导入",
     size:"#SIZE",
     netdisk:"",
-    version:"1.77SST",
+    version:"1.77SST"
 };
