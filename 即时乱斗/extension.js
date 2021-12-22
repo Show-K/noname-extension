@@ -174,7 +174,9 @@ game.import("extension",function(lib,game,ui,get,ai,_status){
 							if(!player.chooseToUseFinish){
 								game.log(player,"跳过出牌");
 								player.popup("跳过出牌");
-								player.set("chooseToUseFinish","skip");
+								game.broadcastAll(function(player){
+									player.chooseToUseFinish="skip";
+								},player);
 								player.addTempSkill("choose_to_use_skip","phaseUseAfter");
 							}
 							else if(player.chooseToUseFinish=="skip"){
@@ -190,7 +192,9 @@ game.import("extension",function(lib,game,ui,get,ai,_status){
 									game.log(player,"结束出牌");
 									player.popup("结束出牌");
 								}
-								player.set("chooseToUseFinish","finish");
+								game.broadcastAll(function(player){
+									player.chooseToUseFinish="finish";
+								},player);
 								player.addTempSkill("choose_to_use_finish","phaseUseAfter");
 							}
 							game.delayx();
