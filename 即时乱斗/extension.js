@@ -59,17 +59,22 @@ game.import("extension",function(lib,game,ui,get,ai,_status){
 				};
 				lib.element.content.phase=function(){
 					"step 0"
-					var str="<span style=\"font-family:fzhtk\">";
-					str+=event.skill?"<span data-nature=\"wood\">额外</span>":"<span data-nature=\"water\">第</span><span data-nature=\"wood\">"+get.cnNumber(game.phaseNumber,true)+"</span>";
-					str+="<span data-nature=\"water\">回合</span><span data-nature=\"fire\">开始</span> <span data-nature=\"water\">第</span><span data-nature=\"wood\">"+get.cnNumber(game.roundNumber,true)+"</span><span data-nature=\"water\">轮</span></span><br>";
-					str+="<span style=\"font-family:fzhtk;font-size:32px\">";
-					str+=event.skill?"<span data-nature=\"wood\">EXTRA</span> <span data-nature=\"water\">TURN</span>":"<span data-nature=\"water\">TURN</span> <span data-nature=\"wood\">"+game.phaseNumber+"</span>";
-					str+=" <span data-nature=\"fire\">STARTS</span><span data-nature=\"water\">,</span> <span data-nature=\"water\">ROUND</span> <span data-nature=\"wood\">"+game.roundNumber+"</span><span data-nature=\"water\">!</span></span>";
+					var str="<span data-nature=\"water\">第</span><span data-nature=\"wood\">"+get.cnNumber(game.roundNumber,true)+"</span><span data-nature=\"water\">轮</span><br>";
+					str+="<span style=\"font-size:48px\">";
+					str+="<span data-nature=\"water\">ROUND</span> <span data-nature=\"wood\">"+game.roundNumber+"</span><span data-nature=\"water\">!</span></span>";
 					player.$fullscreenpop(str);
 					game.delayx();
 					"step 1"
-					var str="<span style=\"font-family:fzhtk\"><span data-nature=\"soil\">"+get.translation(player)+"</span> <span data-nature=\"thunder\">先手</span></span><br>";
-					str+="<span style=\"font-family:fzhtk;font-size:32px\"><span data-nature=\"soil\">";
+					var str=event.skill?"<span data-nature=\"wood\">额外</span>":"<span data-nature=\"water\">第</span><span data-nature=\"wood\">"+get.cnNumber(game.phaseNumber,true)+"</span>";
+					str+="<span data-nature=\"water\">回合</span> <span data-nature=\"fire\">开始</span><br>";
+					str+="<span style=\"font-size:48px\">";
+					str+=event.skill?"<span data-nature=\"wood\">EXTRA</span> <span data-nature=\"water\">TURN</span>":"<span data-nature=\"water\">TURN</span> <span data-nature=\"wood\">"+game.phaseNumber+"</span>";
+					str+=" <span data-nature=\"fire\">STARTS</span><span data-nature=\"water\">!</span></span>";
+					player.$fullscreenpop(str);
+					game.delayx();
+					"step 2"
+					var str="<span data-nature=\"soil\">"+get.translation(player)+"</span> <span data-nature=\"thunder\">先手</span><br>";
+					str+="<span style=\"font-size:48px\"><span data-nature=\"soil\">";
 					if(lib.translateEnglish&&lib.translateEnglish[player.name]){
 						str+=lib.translateEnglish[player.name].toUpperCase();
 					}
@@ -80,11 +85,11 @@ game.import("extension",function(lib,game,ui,get,ai,_status){
 					str+="</span> <span data-nature=\"thunder\">FIRST!</span></span>";
 					player.$fullscreenpop(str);
 					game.delayx();
-					"step 2"
-					player.phaseZhunbei();
 					"step 3"
-					player.phaseJudge();
+					player.phaseZhunbei();
 					"step 4"
+					player.phaseJudge();
+					"step 5"
 					player.phaseDraw();
 					if(!player.noPhaseDelay){
 						if(player==game.me){
@@ -94,9 +99,9 @@ game.import("extension",function(lib,game,ui,get,ai,_status){
 							game.delayx();
 						}
 					}
-					"step 5"
-					player.phaseUse();
 					"step 6"
+					player.phaseUse();
+					"step 7"
 					game.broadcastAll(function(){
 						if(ui.tempnowuxie){
 							ui.tempnowuxie.close();
@@ -107,7 +112,7 @@ game.import("extension",function(lib,game,ui,get,ai,_status){
 					if(!player.noPhaseDelay) game.delayx();
 					//delete player.using;
 					delete player._noSkill;
-					"step 7"
+					"step 8"
 					player.phaseJieshu();
 				};
 				lib.element.content.phaseDraw=function(){
