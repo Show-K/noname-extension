@@ -65,7 +65,7 @@ game.import("extension",function(lib,game,ui,get,ai,_status){
 					str+="<span style=\"font-family:fzhtk;font-size:32px\">";
 					str+=event.skill?"<span data-nature=\"wood\">EXTRA</span> <span data-nature=\"water\">TURN</span>":"<span data-nature=\"water\">TURN</span> <span data-nature=\"wood\">"+game.phaseNumber+"</span>";
 					str+=" <span data-nature=\"fire\">STARTS</span><span data-nature=\"water\">,</span> <span data-nature=\"water\">ROUND</span> <span data-nature=\"wood\">"+game.roundNumber+"</span><span data-nature=\"water\">!</span></span>";
-					game.me.$fullscreenpop(str,null,null,false);
+					player.$fullscreenpop(str);
 					game.delayx();
 					"step 1"
 					var str="<span style=\"font-family:fzhtk\"><span data-nature=\"soil\">"+get.translation(player)+"</span> <span data-nature=\"thunder\">先手</span></span><br>";
@@ -78,7 +78,7 @@ game.import("extension",function(lib,game,ui,get,ai,_status){
 						str+=window.pinyinUtil.getPinyin(get.translation(player),"").toUpperCase();
 					}
 					str+="</span> <span data-nature=\"thunder\">FIRST!</span></span>";
-					game.me.$fullscreenpop(str,null,null,false);
+					player.$fullscreenpop(str);
 					game.delayx();
 					"step 2"
 					player.phaseZhunbei();
@@ -166,13 +166,15 @@ game.import("extension",function(lib,game,ui,get,ai,_status){
 						event.playerPrevious=player;
 						if(result.bool){
 							player.removeSkill("choose_to_use_skip");
-							delete player.chooseToUseFinish;
+							game.broadcastAll(function(player){
+								delete player.chooseToUseFinish;
+							},player);
 						}
 						else{
 							if(!player.chooseToUseFinish){
 								game.log(player,"跳过出牌");
 								player.popup("跳过出牌");
-								player.chooseToUseFinish="skip";
+								player.set("chooseToUseFinish","skip");
 								player.addTempSkill("choose_to_use_skip","phaseUseAfter");
 							}
 							else if(player.chooseToUseFinish=="skip"){
@@ -188,7 +190,7 @@ game.import("extension",function(lib,game,ui,get,ai,_status){
 									game.log(player,"结束出牌");
 									player.popup("结束出牌");
 								}
-								player.chooseToUseFinish="finish";
+								player.set("chooseToUseFinish","finish");
 								player.addTempSkill("choose_to_use_finish","phaseUseAfter");
 							}
 							game.delayx();
@@ -277,9 +279,6 @@ game.import("extension",function(lib,game,ui,get,ai,_status){
 					if(skill){
 						next.skill=skill;
 					}
-					for(var i of game.players){
-						delete i.chooseToUseFinish;
-					}
 					return next;
 				};
 				lib.element.player.phaseDraw=function(){
@@ -302,9 +301,11 @@ game.import("extension",function(lib,game,ui,get,ai,_status){
 					_status.event.next.remove(next2);
 					next.after.push(next2);
 					next2.setContent(function(){
-						for(var i of game.players){
-							delete i.chooseToUseFinish;
-						}
+						game.broadcastAll(function(){
+							for(var i of game.players){
+								delete i.chooseToUseFinish;
+							}
+						});
 					});
 					return next;
 				};
@@ -397,7 +398,7 @@ game.import("extension",function(lib,game,ui,get,ai,_status){
 			author:"Show-K",
 			diskURL:"",
 			forumURL:"",
-			version:"1.1",
+			version:"1.2",
 		},
 		files:{}
 	}
