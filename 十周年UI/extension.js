@@ -8211,7 +8211,7 @@ precontent:function(){
 			node.created = true;
 			node.style.overflow = 'scroll';
 			
-			var list = ['re_caocao', 're_liubei', 'sp_zhangjiao', 'sunquan'];
+			var list = ['sst_peach', 'sst_bowser', 'sst_master_hand', 'sst_ma'];
 			for (var i = 0; i < 4; i++) {
 				var player = ui.create.div('.seat-player.fakeplayer', node);
 				ui.create.div('.avatar', player).setBackground(list.randomRemove(), 'character');
@@ -8426,7 +8426,7 @@ config:{
     },
 	dynamicSkinOutcrop:{
 		name: '动皮露头',
-        init: true,
+        init: false,
 		update:function(){
 			if (window.decadeUI) {
 				var enable = lib.config['extension_十周年UI_dynamicSkinOutcrop'];
@@ -8457,7 +8457,7 @@ config:{
     },
 	campIdentityImageMode:{
         name: '势力身份美化',
-        init: true,
+        init: false,
     },
 	playerKillEffect:{
 		name: '玩家击杀特效',
