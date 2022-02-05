@@ -22,7 +22,7 @@ extension["在线更新"]={
         "extension.js"
 	]
 };
-
+/*
 extension["拖拽读取"]={
     author:"诗笺、Show-K（未经允许修改）",
     intro:"windows电脑版专属扩展，把zip或7z文件（离线包，扩展或素材压缩包，目前不支持导入7z扩展）拖入到游戏内即可导入",
@@ -30,3 +30,4 @@ extension["拖拽读取"]={
     netdisk:"",
     version:"1.77SST"
 };
+*/
