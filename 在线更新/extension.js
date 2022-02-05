@@ -481,7 +481,7 @@ game.import("extension", function(lib, game, ui, get, ai, _status) {
             show_version: {
                 clear: true,
                 nopointer: true,
-                name: '扩展版本： v1.26',
+                name: '扩展版本： v1.26SST',
             },
             update_link_explain: {
                 clear: true,
